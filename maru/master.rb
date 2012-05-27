@@ -10,11 +10,11 @@ class Maru::Master < Sinatra::Base
 		include DataMapper::Resource
 
 		property :id,            Serial
-		property :name,          String
-		property :kind,          String
+		property :name,          String, :required => true
+		property :kind,          String, :required => true
 		property :owner,         String
-		property :prerequisites, Json
-		property :output_dir,    String
+		property :prerequisites, Json,   :required => true, :default => []
+		property :output_dir,    String, :required => true
 
 		timestamps :created_at
 
@@ -27,9 +27,9 @@ class Maru::Master < Sinatra::Base
 		belongs_to :group
 
 		property :id,           Serial
-		property :details,      Json
+		property :details,      Json,     :required => true
 
-		property :expiry,       Integer # in seconds after assigned_at
+		property :expiry,       Integer,  :required => true, :default => 3600 # in seconds after assigned_at
 
 		property :assigned_id,  String
 		property :assigned_at,  DateTime
