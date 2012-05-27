@@ -26,9 +26,10 @@ class Maru::Master < Sinatra::Base
 		belongs_to :group
 
 		property :id,          Serial
+		property :complete,    Boolean
 		property :details,     Json
 
-		property :expiry,      Integer # in seconds
+		property :expiry,      Integer # in seconds after assigned_at
 
 		property :assigned_id, String
 		property :assigned_at, DateTime
@@ -41,22 +42,56 @@ class Maru::Master < Sinatra::Base
 		DataMapper.auto_upgrade!
 	end
 
+	helpers do
+		def generate_id
+			rand( 36 ** 12 ).to_s( 36 )
+		end
+	end
+
 	get '/' do
-		"Status page coming soon..."
+		# Status page
+		halt 401
 	end
 
 	# The following should check the user agent to ensure it's a Maru worker and not a browser
 
 	get '/job' do
-		# Should assign a job to the client
+		content_type "application/json"
+
+		jobs = Job.all :complete.not => true, :assigned_id => nil
+
+		unless params[:kinds].to_s.empty?
+			jobs = jobs.all :group => { :kind => params[:kinds].split( ',' ) }
+		end
+
+		job = jobs.first
+
+		if job.nil?
+			halt 503, JSON.dump( :error => "no jobs available" )
+		else
+			job.update :assigned_id => generate_id, :assigned_at => Time.now
+
+			%{{"job":#{job.to_json( :relationships => { :group => { :exclude => [:output_dir] } } )}}}
+		end
 	end
 
 	post '/job/:id' do
 		# Should accept the result of a job
+		halt 401, JSON.dump( :error => "not implemented" )
 	end
 
 	post '/job/:id/forfeit' do
-		# Should allow a worker to 'give up' on a job
+		content_type "application/json"
+
+		job = Job.first( :id => params[:id], :assigned_id => params[:assigned_id] )
+
+		if job.nil?
+			halt 404, JSON.dump( :error => "job not found" )
+		else
+			job.update :assigned_id => nil, :assigned_at => nil
+
+			JSON.dump( :success => true )
+		end
 	end
 end
 
