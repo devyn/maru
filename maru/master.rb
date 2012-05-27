@@ -76,6 +76,10 @@ class Maru::Master < Sinatra::Base
 			jobs = jobs.all :group => { :kind => params[:kinds].split( ',' ) }
 		end
 
+		unless params[:blacklist].to_s.empty?
+			jobs = jobs.all :id.not => params[:blacklist].split( ',' ).map( &:to_i )
+		end
+
 		job = jobs.first
 
 		if job.nil?
