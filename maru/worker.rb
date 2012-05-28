@@ -35,7 +35,8 @@ module Maru
 			raise NothingToDo if @masters.empty?
 
 			passed = []
-			until passed.include? @robin
+			got_work = false
+			until passed.include? @robin or got_work
 				m = @masters[@robin]
 
 				opt = {}
@@ -49,6 +50,7 @@ module Maru
 						case response.code
 						when 200
 							begin
+								got_work = true
 								job = JSON.parse( response )["job"]
 
 								puts "\e[1m> ##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m) \e[33mprocessing\e[0m"
@@ -86,7 +88,7 @@ module Maru
 				end
 			end
 
-			raise NothingToDo
+			raise NothingToDo unless got_work
 		end
 
 		def cleanup
