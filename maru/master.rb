@@ -19,6 +19,8 @@ class Maru::Master < Sinatra::Base
 		timestamps :created_at
 
 		has n, :jobs
+
+		self.raise_on_save_failure = true
 	end
 
 	class Job
@@ -27,7 +29,7 @@ class Maru::Master < Sinatra::Base
 		belongs_to :group
 
 		property :id,           Serial
-		property :details,      Json,     :required => true
+		property :details,      Json,     :default => {}
 
 		property :expiry,       Integer,  :required => true, :default => 3600 # in seconds after assigned_at
 
@@ -35,6 +37,8 @@ class Maru::Master < Sinatra::Base
 		property :assigned_at,  DateTime
 
 		property :completed_at, DateTime
+
+		self.raise_on_save_failure = true
 	end
 
 	DataMapper.finalize
