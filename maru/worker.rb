@@ -15,9 +15,10 @@ module Maru
 		attr_accessor :masters, :kinds, :temp_dir
 
 		DEFAULTS = {
-			masters:  [],
-			kinds:    nil,
-			temp_dir: "/tmp/maru.#$$"
+			masters:      [],
+			kinds:        nil,
+			temp_dir:     "/tmp/maru.#$$",
+			group_expiry: 7200
 		}
 
 		class NothingToDo  < Exception; end
@@ -28,11 +29,12 @@ module Maru
 		def initialize( config={} )
 			config = DEFAULTS.dup.merge( config )
 
-			@masters   = config[:masters].map { |u| RestClient::Resource.new( u ) }
-			@kinds     = config[:kinds]
-			@temp_dir  = config[:temp_dir]
-			@blacklist = {}
-			@robin     = 0
+			@masters      = config[:masters].map { |u| RestClient::Resource.new( u ) }
+			@kinds        = config[:kinds]
+			@temp_dir     = config[:temp_dir]
+			@group_expiry = config[:group_expiry]
+			@blacklist    = {}
+			@robin        = 0
 		end
 
 		def work
@@ -63,7 +65,7 @@ module Maru
 								return
 							rescue Exception
 								puts "\e[1m> ##{job["id"]} (#{job["group"]["name"]}) \e[31mforfeiting:\e[0m #$!"
-								m['job'][job['id']]["forfeit"].post :assigned_id => job["assigned_id"]
+								m['job'][job['id']]["forfeit"].post :assigned_id => job["assigned_id"] rescue nil
 
 								puts "\e[1m> \e[0;34mBlacklisting ##{job["id"]}.\e[0m"
 								@blacklist[m.to_s] ||= []
@@ -91,6 +93,20 @@ module Maru
 			end
 
 			raise NothingToDo
+		end
+
+		def cleanup
+			if File.directory? @temp_dir
+				Dir.entries( @temp_dir ).each do |d|
+					case d
+					when '.', '..'
+					when /^group-/
+						if Time.now - File.mtime( File.join( @temp_dir, d ) ) > @group_expiry
+							FileUtils.rm_r File.join( @temp_dir, d )
+						end
+					end
+				end
+			end
 		end
 
 		private
@@ -182,8 +198,12 @@ module Maru
 					options[:keep_temp] = v
 				end
 
-				opts.on "-w", "--wait-time N", "Amount of time to wait (in seconds) if there are no jobs available. Default: 30" do |num|
+				opts.on "-w", "--wait-time N", "Amount of time (in seconds) to wait if there are no jobs available. Default: 30" do |num|
 					options[:wait_time] = num.to_i
+				end
+
+				opts.on "-e", "--group-expiry N", "Amount of time (in seconds) to keep group files. Default: 7200" do |num|
+					options[:group_expiry] = num.to_i
 				end
 
 				opts.on "-r", "--require FILE", "Load a ruby script (most likely a plugin) before starting" do |f|
@@ -220,6 +240,7 @@ module Maru
 
 			loop do
 				begin
+					w.cleanup
 					w.work
 				rescue Maru::Worker::NothingToDo
 					puts "\e[1m> \e[0;34mNothing to do. Waiting #{options[:wait_time] || 30} seconds.\e[0m"
