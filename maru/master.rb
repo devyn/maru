@@ -69,6 +69,37 @@ class Maru::Master < Sinatra::Base
 		halt 401
 	end
 
+	get '/group/new/:kind' do
+		# Form for creating groups
+		halt 401
+	end
+
+	put '/group' do
+		# Creates a group
+		halt 401
+	end
+
+	get '/group/:id.json' do
+		# Returns information about a group in JSON format, for automation purposes
+		halt 401
+	end
+
+	get '/group/:id/edit' do
+		# Form for editing groups
+		# Not all group kinds may be editable
+		halt 401
+	end
+
+	post '/group/:id' do
+		# Edits/updates a group
+		halt 401
+	end
+
+	delete '/group/:id' do
+		# Deletes a group
+		halt 401
+	end
+
 	# The following should check the user agent to ensure it's a Maru worker and not a browser
 
 	get '/job' do
