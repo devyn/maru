@@ -79,8 +79,25 @@ class Maru::Master < Sinatra::Base
 	end
 
 	put '/group' do
-		# Creates a group
-		halt 401
+		content_type 'text/json'
+
+		if params[:kind].nil? or !Maru::Plugins.include?( params[:kind] )
+			halt 501, {:errors => ["Unsupported group kind"]}.to_json
+			next
+		end
+
+		group = Group.new( params )
+		group.id = nil
+
+		if group.valid? and Maru::Plugins[group.kind].validate_group( group )
+			group.save
+
+			Maru::Plugins[group.kind].create_jobs_for group
+
+			{:group => group}.to_json
+		else
+			halt 400, {:errors => group.errors.full_messages}.to_json
+		end
 	end
 
 	get '/group/:id.json' do
