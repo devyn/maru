@@ -4,15 +4,9 @@ require 'rest_client'
 require 'fileutils'
 require 'digest'
 
-class String
-	def to_class_name
-		capitalize.gsub( /[_ ]([A-Za-z])/ ) { $1.upcase }
-	end
-end
+require_relative 'plugins'
 
 module Maru
-	module Plugins; end
-
 	class Worker
 		attr_accessor :masters, :kinds, :temp_dir
 
@@ -113,7 +107,7 @@ module Maru
 
 		def process_job job, master
 			handle = master["job"][job["id"]]
-			plugin = Maru::Plugins::const_get( job["group"]["kind"].to_class_name )
+			plugin = Maru::Plugins[job["group"]["kind"]]
 
 			if plugin.respond_to? :process_job
 				files = Hash[plugin.process_job( job ).map { |f| [f, File.new( f )] }]
