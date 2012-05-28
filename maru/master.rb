@@ -52,6 +52,17 @@ class Maru::Master < Sinatra::Base
 	configure do
 		DataMapper.setup( :default, ENV["DATABASE_URL"] || "sqlite://#{Dir.pwd}/maru.db" )
 		DataMapper.auto_upgrade!
+
+		@@expiry_check = Thread.start do
+			loop do
+				Job.all( :assigned_id.not => nil, :assigned_at.not => nil ).each do |job|
+					if Time.now - job.assigned_at > job.expiry
+						job.update :assigned_id => nil, :assigned_at => nil
+					end
+				end
+				sleep 60
+			end
+		end
 	end
 
 	helpers do
