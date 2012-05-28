@@ -3,7 +3,9 @@ require 'json'
 require 'data_mapper'
 require 'fileutils'
 
-module Maru; end
+module Maru
+	module Plugins; end
+end
 
 class Maru::Master < Sinatra::Base
 	class Group

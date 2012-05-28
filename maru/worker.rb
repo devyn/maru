@@ -11,6 +11,8 @@ class String
 end
 
 module Maru
+	module Plugins; end
+
 	class Worker
 		attr_accessor :masters, :kinds, :temp_dir
 
@@ -23,8 +25,6 @@ module Maru
 
 		class NothingToDo  < Exception; end
 		class Inconsistent < Exception; end
-
-		module Plugins; end
 
 		def initialize( config={} )
 			config = DEFAULTS.dup.merge( config )
@@ -113,7 +113,7 @@ module Maru
 
 		def process_job job, master
 			handle = master["job"][job["id"]]
-			plugin = Maru::Worker::Plugins::const_get( job["group"]["kind"].to_class_name )
+			plugin = Maru::Plugins::const_get( job["group"]["kind"].to_class_name )
 
 			if plugin.respond_to? :process_job
 				files = Hash[plugin.process_job( job ).map { |f| [f, File.new( f )] }]
