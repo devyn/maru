@@ -11,8 +11,11 @@ class Maru::Master < Sinatra::Base
 
 		property :id,            Serial
 		property :name,          String, :required => true
+		property :details,       Json,   :default  => {}
+
 		property :kind,          String, :required => true
 		property :owner,         String
+
 		property :prerequisites, Json,   :required => true, :default => []
 		property :output_dir,    String, :required => true
 
@@ -29,7 +32,8 @@ class Maru::Master < Sinatra::Base
 		belongs_to :group
 
 		property :id,           Serial
-		property :details,      Json,     :default => {}
+		property :name,         String,   :required => true
+		property :details,      Json,     :default  => {}
 
 		property :expiry,       Integer,  :required => true, :default => 3600 # in seconds after assigned_at
 
