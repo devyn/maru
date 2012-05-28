@@ -116,8 +116,8 @@ module Maru
 
 				handle.post :assigned_id => job["assigned_id"], :files => files
 
-				files.each do |f|
-					File.unlink f[0]
+				files.each do |fn,f|
+					File.unlink fn
 				end
 
 				puts "\e[1m> ##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m) \e[32mdone\e[0m"
