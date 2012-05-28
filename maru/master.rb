@@ -68,12 +68,12 @@ class Maru::Master < Sinatra::Base
 
 	get '/' do
 		# Status page
-		halt 401
+		halt 501
 	end
 
 	get '/group/new/:kind' do
 		# Form for creating groups
-		halt 401
+		halt 501
 	end
 
 	put '/group' do
@@ -83,23 +83,23 @@ class Maru::Master < Sinatra::Base
 
 	get '/group/:id.json' do
 		# Returns information about a group in JSON format, for automation purposes
-		halt 401
+		halt 501
 	end
 
 	get '/group/:id/edit' do
 		# Form for editing groups
 		# Not all group kinds may be editable
-		halt 401
+		halt 501
 	end
 
 	post '/group/:id' do
 		# Edits/updates a group
-		halt 401
+		halt 501
 	end
 
 	delete '/group/:id' do
 		# Deletes a group
-		halt 401
+		halt 501
 	end
 
 	# The following should check the user agent to ensure it's a Maru worker and not a browser
