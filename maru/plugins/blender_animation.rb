@@ -27,14 +27,16 @@ module Maru
 			end
 
 			def create_jobs_for(group)
-				(group.details["initial frame"].to_i..group.details["final frame"]).each do |frame_number|
+				Maru::Master::Job.transaction do
+					(group.details["initial frame"].to_i..group.details["final frame"]).each do |frame_number|
 
-					job         = Maru::Master::Job.new
-					job.name    = "frame #{frame_number}"
-					job.details = {"frame number" => frame_number}
-					job.group   = group
-					job.expiry  = group.details["expiry"] || 3600
-					job.save
+						job         = Maru::Master::Job.new
+						job.name    = "frame #{frame_number}"
+						job.details = {"frame number" => frame_number}
+						job.group   = group
+						job.expiry  = group.details["expiry"] || 3600
+						job.save
+					end
 				end
 			end
 		end
