@@ -53,14 +53,14 @@ module Maru
 								got_work = true
 								job = JSON.parse( response )["job"]
 
-								puts "\e[1m> ##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m) \e[33mprocessing\e[0m"
+								puts "\e[1m> #{format_job job} \e[1;33mprocessing\e[0m"
 
 								with_group job["group"] do
 									process_job job, m
 								end
 								return
 							rescue Exception
-								puts "\e[1m> ##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m) \e[31mforfeiting:\e[0m #$!"
+								puts "\e[1m> #{format_job job} \e[1;31mforfeiting:\e[0m #$!"
 								m['job'][job['id']]["forfeit"].post :assigned_id => job["assigned_id"] rescue nil
 
 								puts "\e[1m> \e[0;34mBlacklisting ##{job["id"]}.\e[0m"
@@ -122,8 +122,12 @@ module Maru
 					File.unlink fn
 				end
 
-				puts "\e[1m> ##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m) \e[32mdone\e[0m"
+				puts "\e[1m> #{format_job job} \e[1;32mdone\e[0m"
 			end
+		end
+
+		def format_job job
+			"\e[0;1m##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m - \e[0;32m#{job["group"]["email"]}\e[0;1m)\e[0m"
 		end
 
 		def with_group group
