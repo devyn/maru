@@ -23,6 +23,10 @@ class Maru::Master < Sinatra::Base
 
 		has n, :jobs
 
+		def to_color base=37
+			"\e[1;36m##{self.id} \e[0;#{base}m(\e[1;36m#{self.name}\e[0;#{base}m)\e[0m"
+		end
+
 		self.raise_on_save_failure = true
 	end
 
@@ -41,6 +45,10 @@ class Maru::Master < Sinatra::Base
 		property :assigned_at,  DateTime
 
 		property :completed_at, DateTime
+
+		def to_color base=37
+			"\e[1;35m##{self.id} \e[0;#{base}m(\e[1;36m#{self.group.name} \e[0;#{base}m/ \e[36m#{self.name}\e[#{base}m)\e[0m"
+		end
 
 		self.raise_on_save_failure = true
 	end
@@ -105,6 +113,8 @@ class Maru::Master < Sinatra::Base
 
 			Maru::Plugins[group.kind].create_jobs_for group
 
+			warn "\e[1m> \e[34mGroup #{group.to_color 34}\e[34m created with \e[36m#{group.jobs.length}\e[34m jobs"
+
 			{:group => group}.to_json
 		else
 			halt 400, {:errors => group.errors.full_messages}.to_json
@@ -154,6 +164,8 @@ class Maru::Master < Sinatra::Base
 		else
 			job.update :assigned_id => generate_id, :assigned_at => Time.now
 
+			warn "\e[1m> \e[0;34mJob #{job.to_color 34} \e[1;33massigned id \e[0;33m#{job.assigned_id}\e[0m"
+
 			%{{"job":#{job.to_json( :relationships => { :group => { :exclude => [:output_dir] } } )}}}
 		end
 	end
@@ -182,6 +194,8 @@ class Maru::Master < Sinatra::Base
 
 			job.update :completed_at => Time.now, :assigned_id => nil
 
+			warn "\e[1m> \e[0;34mJob #{job.to_color 34} \e[1;32mcompleted\e[0m"
+
 			JSON.dump( :success => true )
 		end
 	end
@@ -195,6 +209,8 @@ class Maru::Master < Sinatra::Base
 			halt 404, JSON.dump( :error => "job not found" )
 		else
 			job.update :assigned_id => nil, :assigned_at => nil
+
+			warn "\e[1m> \e[0;34mJob #{job.to_color 34} \e[1;31mforfeited\e[0m"
 
 			JSON.dump( :success => true )
 		end
