@@ -24,7 +24,7 @@ class Maru::Master < Sinatra::Base
 		has n, :jobs
 
 		def to_color base=37
-			"\e[1;36m##{self.id} \e[0;#{base}m(\e[1;36m#{self.name}\e[0;#{base}m)\e[0m"
+			"\e[1;31m##{self.id} \e[0;#{base}m(\e[1;36m#{self.name}\e[0;#{base}m)\e[0m"
 		end
 
 		self.raise_on_save_failure = true
@@ -113,7 +113,7 @@ class Maru::Master < Sinatra::Base
 
 			Maru::Plugins[group.kind].create_jobs_for group
 
-			warn "\e[1m> \e[34mGroup #{group.to_color 34}\e[34m created with \e[36m#{group.jobs.length}\e[34m jobs"
+			warn "\e[1m> \e[0mGroup #{group.to_color}\e[0m created with \e[32m#{group.jobs.length}\e[0m jobs"
 
 			{:group => group}.to_json
 		else
@@ -164,7 +164,7 @@ class Maru::Master < Sinatra::Base
 		else
 			job.update :assigned_id => generate_id, :assigned_at => Time.now
 
-			warn "\e[1m> \e[0;34mJob #{job.to_color 34} \e[1;33massigned id \e[0;33m#{job.assigned_id}\e[0m"
+			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;33massigned id \e[0;33m#{job.assigned_id}\e[0m"
 
 			%{{"job":#{job.to_json( :relationships => { :group => { :exclude => [:output_dir] } } )}}}
 		end
@@ -194,7 +194,7 @@ class Maru::Master < Sinatra::Base
 
 			job.update :completed_at => Time.now, :assigned_id => nil
 
-			warn "\e[1m> \e[0;34mJob #{job.to_color 34} \e[1;32mcompleted\e[0m"
+			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;32mcompleted\e[0m"
 
 			JSON.dump( :success => true )
 		end
@@ -210,7 +210,7 @@ class Maru::Master < Sinatra::Base
 		else
 			job.update :assigned_id => nil, :assigned_at => nil
 
-			warn "\e[1m> \e[0;34mJob #{job.to_color 34} \e[1;31mforfeited\e[0m"
+			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;31mforfeited\e[0m"
 
 			JSON.dump( :success => true )
 		end
