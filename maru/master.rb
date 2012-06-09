@@ -47,6 +47,8 @@ module Maru
 			property :assigned_at,  DateTime
 			property :completed_at, DateTime
 
+			belongs_to :session, :required => false
+
 			def to_color base=37
 				"\e[1;35m##{self.id} \e[0;#{base}m(\e[1;36m#{self.group.name} \e[0;#{base}m/ \e[36m#{self.name}\e[#{base}m)\e[0m"
 			end
@@ -57,7 +59,7 @@ module Maru
 		class Session
 			include DataMapper::Resource
 
-			belongs_to :job, :required => false
+			has 1, :job
 
 			property :id, String, :key => true, :default => proc { rand(36**12).to_s(36) }
 
