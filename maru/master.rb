@@ -18,8 +18,8 @@ module Maru
 			property :kind,          String, :required => true
 			property :owner,         String
 
-			property :prerequisites, Json,   :required => true, :default => []
-			property :output_dir,    String, :required => true
+			property :prerequisites, Json,   :default  => []
+			property :upload_url,    String, :required => true
 
 			timestamps :created_at
 
@@ -197,42 +197,6 @@ module Maru
 					ret.(:ok)
 				else
 					ret.(:err)
-				end
-			end
-
-			def file_output_path(path)
-				if @session and @session.job
-					File.join(@session.job.group.output_dir, path)
-				else
-					raise "nothing has been offered"
-				end
-			end
-
-			def upload_files(files, &ret)
-				if @session and @session.job and files
-					start_files files.dup do
-						j = {"successful" => [], "failed" => []}
-
-						files.each do |file|
-							if verify_file file
-								j["successful"] << file["name"]
-							else
-								j["falied"] << file["name"]
-							end
-						end
-
-						ret.(j["failed"].empty? ? :ok : :err, j)
-					end
-				else
-					ret.(:err)
-				end
-			end
-
-			def verify_file(file)
-				if file["sha256"]
-					Digest::SHA256.file(file_output_path(file)).hexdigest == file["sha256"]
-				else
-					true
 				end
 			end
 
