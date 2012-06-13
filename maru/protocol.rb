@@ -1,6 +1,7 @@
 require 'json'
 require 'eventmachine'
 require 'digest'
+require 'socket'
 
 module Maru
 	module Protocol
@@ -14,16 +15,24 @@ module Maru
 					buf = @buffer
 					buf << data.slice!(0..idx)
 					@buffer = [data]
-					handle_json JSON.parse(buf.join(""))
+					buf = buf.join("").strip
+					if buf.empty?
+						return
+					else
+						handle_json JSON.parse(buf)
+					end
 				else
 					@buffer << data
 				end
+			rescue JSON::ParserError
+				close_connection
 			end
 
 			def handle_json(json)
-				p json
+				log_request json
 
 				ret = ->(*response) {
+					log_response json, response
 					tell :event => :response, :method => json["method"], :id => json["id"], :response => response
 				}
 
@@ -49,9 +58,11 @@ module Maru
 						forfeit &ret
 					when "create_group"
 						create_group json["group"], &ret
+					when "cause_err"
+						raise "error!"
 					end
 				rescue Exception => e
-					p e
+					log_error e
 					ret.(:err, e.message)
 				end
 			end
@@ -67,6 +78,30 @@ module Maru
 			def tell_raw(data)
 				send_data data
 				send_data "\n"
+			end
+
+			def log_request(req)
+				req_ = req.dup
+				req_.delete "id"
+				req_.delete "method"
+				warn "#{Time.now}\t#{ip}\t\e[36m#{req["method"]}#{req["id"] ? "/#{req["id"]}" : ""}\e[0m\t<<\t#{req_.to_json}"
+			end
+
+			def log_response(req, res)
+				warn "#{Time.now}\t#{ip}\t\e[36m#{req["method"]}#{req["id"] ? "/#{req["id"]}" : ""}\e[0m\t>>\t#{res.to_json}"
+			end
+
+			def log_error(err)
+				warn "\e[31m#{Time.now}\t#{ip}\t#{err.class.name}: #{err.message}\e[0m"
+
+				err.backtrace.each do |bt|
+					warn "\e[31m\t\t\t#{bt}\e[0m"
+				end
+			end
+
+			def ip
+				si = Socket.unpack_sockaddr_in(get_peername)
+				return si[1]
 			end
 		end
 
