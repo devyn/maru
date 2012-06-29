@@ -60,6 +60,8 @@ module Maru
 						create_group json["group"], &ret
 					when "cause_err"
 						raise "error!"
+					else
+						ret.(:err, "unknown method")
 					end
 				rescue Exception => e
 					log_error e
