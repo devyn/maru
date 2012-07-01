@@ -240,6 +240,8 @@ class Maru::Master < Sinatra::Base
 		else
 			job.update :assigned_id => nil, :assigned_at => nil
 
+			job_available
+
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;31mforfeited\e[0m"
 
 			JSON.dump( :success => true )
