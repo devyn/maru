@@ -1,6 +1,4 @@
 require 'sinatra/base'
-require 'sinatra/async'
-require 'eventmachine'
 require 'json'
 require 'data_mapper'
 require 'fileutils'
@@ -8,8 +6,6 @@ require 'fileutils'
 require_relative 'plugins'
 
 class Maru::Master < Sinatra::Base
-	register Sinatra::Async
-
 	class Group
 		include DataMapper::Resource
 
@@ -65,22 +61,14 @@ class Maru::Master < Sinatra::Base
 		DataMapper.setup( :default, ENV["DATABASE_URL"] || "sqlite://#{Dir.pwd}/maru.db" )
 		DataMapper.auto_upgrade!
 
-		@@waiting = []
-
-		EM.next_tick do
-			@@expiry_check = EM.add_periodic_timer(60) do
-				new_jobs = false
+		@@expiry_check = Thread.start do
+			loop do
 				Job.all( :assigned_id.not => nil, :assigned_at.not => nil ).each do |job|
 					if Time.now - job.assigned_at > job.expiry
 						job.update :assigned_id => nil, :assigned_at => nil
-						new_jobs = true
 					end
 				end
-				if new_jobs
-					a = @@waiting
-					@@waiting = []
-					a.each &:call
-				end
+				sleep 60
 			end
 		end
 	end
@@ -96,14 +84,6 @@ class Maru::Master < Sinatra::Base
 
 			raise PathIsOutside if o[0,base.size] != base
 			return o
-		end
-
-		def job_available
-			EM.next_tick do
-				a = @@waiting
-				@@waiting = []
-				a.each &:call
-			end
 		end
 	end
 
@@ -135,8 +115,6 @@ class Maru::Master < Sinatra::Base
 
 			warn "\e[1m> \e[0mGroup #{group.to_color}\e[0m created with \e[32m#{group.jobs.length}\e[0m jobs"
 
-			job_available
-
 			{:group => group}.to_json
 		else
 			halt 400, {:errors => group.errors.full_messages}.to_json
@@ -166,38 +144,30 @@ class Maru::Master < Sinatra::Base
 
 	# The following should check the user agent to ensure it's a Maru worker and not a browser
 
-	aget '/job' do
+	get '/job' do
 		content_type "application/json"
 
-		check = -> do
-			jobs = Job.all :completed_at => nil, :assigned_id => nil
+		jobs = Job.all :completed_at => nil, :assigned_id => nil
 
-			unless params[:kinds].to_s.empty?
-				jobs = jobs.all :group => { :kind => params[:kinds].split( ',' ) }
-			end
-
-			unless params[:blacklist].to_s.empty?
-				jobs = jobs.all :id.not => params[:blacklist].split( ',' ).map( &:to_i )
-			end
-
-			job = jobs.first
-
-			if job.nil?
-				@@waiting << check
-			else
-				job.update :assigned_id => generate_id, :assigned_at => Time.now
-
-				warn "\e[1m> \e[0mJob #{job.to_color} \e[1;33massigned id \e[0;33m#{job.assigned_id}\e[0m"
-
-				body %{{"job":#{job.to_json( :relationships => { :group => { :exclude => [:output_dir] } } )}}}
-			end
+		unless params[:kinds].to_s.empty?
+			jobs = jobs.all :group => { :kind => params[:kinds].split( ',' ) }
 		end
 
-		on_close do
-			@@waiting.delete check
+		unless params[:blacklist].to_s.empty?
+			jobs = jobs.all :id.not => params[:blacklist].split( ',' ).map( &:to_i )
 		end
 
-		check.()
+		job = jobs.first
+
+		if job.nil?
+			halt 503, JSON.dump( :error => "no jobs available" )
+		else
+			job.update :assigned_id => generate_id, :assigned_at => Time.now
+
+			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;33massigned id \e[0;33m#{job.assigned_id}\e[0m"
+
+			%{{"job":#{job.to_json( :relationships => { :group => { :exclude => [:output_dir] } } )}}}
+		end
 	end
 
 	post '/job/:id' do
@@ -239,8 +209,6 @@ class Maru::Master < Sinatra::Base
 			halt 404, JSON.dump( :error => "job not found" )
 		else
 			job.update :assigned_id => nil, :assigned_at => nil
-
-			job_available
 
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;31mforfeited\e[0m"
 
