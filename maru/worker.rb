@@ -9,6 +9,7 @@ require_relative 'plugins'
 module Maru
 	class MasterLink
 		class CanNotAuthenticate < Exception; end
+		class NoJobsAvailable < Exception; end
 
 		def initialize(url, worker_name, worker_key)
 			@resource    = RestClient::Resource.new( url )
@@ -32,7 +33,15 @@ module Maru
 		end
 
 		def request_job(params={})
-			with_authentication { JSON.parse @resource[:job].get(:params => params) }
+			with_authentication do
+				res = @resource[:job].get(:params => params)
+				case res.code
+				when 200
+					JSON.parse(res)
+				when 204
+					raise NoJobsAvailable
+				end
+			end
 		end
 
 		def complete_job(id, result)
@@ -120,7 +129,15 @@ module Maru
 					end
 				rescue Errno::ECONNREFUSED
 					warn "\e[1m> \e[0;33mWarning: \e[35m#{m}\e[33m may be down.\e[0m"
+				rescue Maru::MasterLink::NoJobsAvailable
+				rescue SystemExit
+					exit
 				rescue Exception
+					warn "\e[1m> \e[0;31mUnhandled exception:\e[0m"
+					warn "  #{$!.class.name}: #{$!.message}"
+					$!.backtrace.each do |b|
+						warn "    #{b}"
+					end
 				end
 
 				passed << @robin
