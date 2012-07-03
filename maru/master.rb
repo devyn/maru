@@ -2,6 +2,7 @@ require 'sinatra/base'
 require 'json'
 require 'data_mapper'
 require 'fileutils'
+require 'openssl'
 
 require_relative 'plugins'
 
@@ -34,6 +35,7 @@ class Maru::Master < Sinatra::Base
 		include DataMapper::Resource
 
 		belongs_to :group
+		belongs_to :worker, :required => false
 
 		property :id,           Serial
 		property :name,         String,   :required => true
@@ -41,9 +43,7 @@ class Maru::Master < Sinatra::Base
 
 		property :expiry,       Integer,  :required => true, :default => 3600 # in seconds after assigned_at
 
-		property :assigned_id,  String
 		property :assigned_at,  DateTime
-
 		property :completed_at, DateTime
 
 		def to_color base=37
@@ -53,9 +53,27 @@ class Maru::Master < Sinatra::Base
 		self.raise_on_save_failure = true
 	end
 
+	class Worker
+		include DataMapper::Resource
+
+		has n, :jobs
+
+		property :name,           String, :key => true      # The name of the worker.
+		property :authenticator,  String, :required => true # The key, but we can't call it that.
+
+		property :verification,   String, :required => true, :default => ->{ rand(36**10).to_s(36) }
+		         # Revoke all sessions issued to the worker by changing the verification property.
+
+		def to_color base=37
+			"\e[33m#{self.name}\e[0m"
+		end
+	end
+
 	DataMapper.finalize
 
 	class PathIsOutside < Exception; end
+
+	enable :sessions
 
 	configure do
 		DataMapper.setup( :default, ENV["DATABASE_URL"] || "sqlite://#{Dir.pwd}/maru.db" )
@@ -63,9 +81,9 @@ class Maru::Master < Sinatra::Base
 
 		@@expiry_check = Thread.start do
 			loop do
-				Job.all( :assigned_id.not => nil, :assigned_at.not => nil ).each do |job|
+				Job.all( :worker.not => nil, :completed_at => nil ).each do |job|
 					if Time.now - job.assigned_at > job.expiry
-						job.update :assigned_id => nil, :assigned_at => nil
+						job.update :worker => nil
 					end
 				end
 				sleep 60
@@ -84,6 +102,14 @@ class Maru::Master < Sinatra::Base
 
 			raise PathIsOutside if o[0,base.size] != base
 			return o
+		end
+
+		def get_worker
+			Worker.first :name => session[:worker], :verification => session[:verification]
+		end
+
+		def get_worker!
+			get_worker or halt(403, {"Content-Type" => "text/plain"}, "Who are you? Worker, authenticate!")
 		end
 	end
 
@@ -144,10 +170,40 @@ class Maru::Master < Sinatra::Base
 
 	# The following should check the user agent to ensure it's a Maru worker and not a browser
 
+	get '/worker/authenticate' do
+		content_type "text/plain"
+
+		session[:challenge] = rand(36**20).to_s(36)
+	end
+
+	post '/worker/authenticate' do
+		content_type "text/plain"
+
+		if session[:challenge]
+			target = Worker.first :name => params[:name]
+
+			if target and params[:response] == OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, target.authenticator, session[:challenge])
+				session[:worker]       = target.name
+				session[:verification] = target.verification
+				session[:challenge]    = nil
+				"Authentication successful."
+			else
+				session[:challenge] = nil
+				halt 403, "Authentication failed. You'll have to get another challenge."
+			end
+
+			session[:challenge] = nil
+		else
+			halt 400, "You must first obtain a challenge. (GET /worker/authenticate)"
+		end
+	end
+
 	get '/job' do
 		content_type "application/json"
 
-		jobs = Job.all :completed_at => nil, :assigned_id => nil
+		worker = get_worker!
+
+		jobs = Job.all :worker => nil
 
 		unless params[:kinds].to_s.empty?
 			jobs = jobs.all :group => { :kind => params[:kinds].split( ',' ) }
@@ -160,20 +216,22 @@ class Maru::Master < Sinatra::Base
 		job = jobs.first
 
 		if job.nil?
-			halt 503, JSON.dump( :error => "no jobs available" )
+			halt 204, JSON.dump( :error => "no jobs available" )
 		else
-			job.update :assigned_id => generate_id, :assigned_at => Time.now
+			job.update :worker => worker, :assigned_at => Time.now
 
-			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;33massigned id \e[0;33m#{job.assigned_id}\e[0m"
+			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;33massigned to \e[0m#{worker.to_color}"
 
-			%{{"job":#{job.to_json( :relationships => { :group => { :exclude => [:output_dir] } } )}}}
+			%{{"job":#{job.to_json( :relationships => { :worker => { :include => [:name] }, :group => { :exclude => [:output_dir] } } )}}}
 		end
 	end
 
 	post '/job/:id' do
 		content_type "application/json"
 
-		job = Job.first :id => params[:id], :assigned_id => params[:assigned_id]
+		worker = get_worker!
+
+		job = Job.first :id => params[:id], :worker => worker
 
 		if job.nil?
 			halt 404, JSON.dump( :error => "job not found" )
@@ -192,9 +250,9 @@ class Maru::Master < Sinatra::Base
 				end
 			end unless params[:files].nil?
 
-			job.update :completed_at => Time.now, :assigned_id => nil
+			job.update :completed_at => Time.now
 
-			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;32mcompleted\e[0m"
+			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;32mcompleted by \e[0m#{worker.to_color}"
 
 			JSON.dump( :success => true )
 		end
@@ -203,14 +261,16 @@ class Maru::Master < Sinatra::Base
 	post '/job/:id/forfeit' do
 		content_type "application/json"
 
-		job = Job.first :id => params[:id], :assigned_id => params[:assigned_id]
+		worker = get_worker!
+
+		job = Job.first :id => params[:id], :worker => worker
 
 		if job.nil?
 			halt 404, JSON.dump( :error => "job not found" )
 		else
 			job.update :assigned_id => nil, :assigned_at => nil
 
-			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;31mforfeited\e[0m"
+			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;31mforfeited by \e[0m#{worker.to_color}"
 
 			JSON.dump( :success => true )
 		end

@@ -2,16 +2,70 @@ require 'json'
 require 'yaml'
 require 'rest_client'
 require 'fileutils'
-require 'digest'
+require 'openssl'
 
 require_relative 'plugins'
 
 module Maru
+	class MasterLink
+		class CanNotAuthenticate < Exception; end
+
+		def initialize(url, worker_name, worker_key)
+			@resource    = RestClient::Resource.new( url )
+			@worker_name = worker_name
+			@worker_key  = worker_key
+		end
+
+		def authenticate
+			auth      = @resource[:"worker/authenticate"]
+			challenge = auth.get
+			response  = OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, @worker_key, challenge)
+			result    = auth.post( { :name => @worker_name, :response => response }, :cookies => challenge.cookies )
+
+			@resource.options[:cookies] = result.cookies
+
+			warn "\e[1m> \e[0;34mAuthenticated with \e[35m#{@resource}\e[0m"
+			true
+		rescue RestClient::Forbidden
+			warn "\e[1m> \e[0;35m#{@resource}\e[31m refused our credentials\e[0m"
+			false
+		end
+
+		def request_job(params={})
+			with_authentication { JSON.parse @resource[:job].get(:params => params) }
+		end
+
+		def complete_job(id, result)
+			with_authentication { @resource[:job][id].post result }
+		end
+
+		def forfeit_job(id)
+			with_authentication { @resource[:job][id][:forfeit].post }
+		end
+
+		def to_s
+			@resource.to_s
+		end
+
+		private
+
+		def with_authentication &blk
+			blk.call
+		rescue RestClient::Forbidden
+			if authenticate
+				blk.call
+			else
+				raise CanNotAuthenticate, @resource.to_s
+			end
+		end
+	end
+
 	class Worker
 		attr_accessor :masters, :kinds, :temp_dir
 
 		DEFAULTS = {
-			masters:      [],
+			name:         "A Worker",
+			masters:      [{"url" => "http://maru.example.org/", "key" => "totally secret key"}],
 			kinds:        nil,
 			temp_dir:     "/tmp/maru.#$$",
 			group_expiry: 7200
@@ -23,7 +77,8 @@ module Maru
 		def initialize( config={} )
 			config = DEFAULTS.dup.merge( config )
 
-			@masters      = config[:masters].map { |u| RestClient::Resource.new( u ) }
+			@name         = config[:name]
+			@masters      = config[:masters].map { |m| Maru::MasterLink.new( m["url"], @name, m["key"] ) }
 			@kinds        = config[:kinds]
 			@temp_dir     = config[:temp_dir]
 			@group_expiry = config[:group_expiry]
@@ -40,43 +95,31 @@ module Maru
 				m = @masters[@robin]
 
 				opt = {}
-				opt[:kinds]     = @kinds.join( "," )             if @kinds
-				opt[:blacklist] = @blacklist[m.to_s].join( ',' ) if @blacklist[m.to_s]
-
-				job = nil
+				opt[:kinds]     = @kinds.join( "," )        if @kinds
+				opt[:blacklist] = @blacklist[m].join( ',' ) if @blacklist[m]
 
 				begin
-					m['job'].get :params => opt do |response, request, result, &block|
-						case response.code
-						when 200
-							begin
-								got_work = true
-								job = JSON.parse( response )["job"]
+					job = m.request_job(opt)
+					got_work = true
 
-								puts "\e[1m> #{format_job job} \e[1;33mprocessing\e[0m"
+					puts "\e[1m> #{format_job job} \e[1;33mprocessing\e[0m"
 
-								with_group job["group"] do
-									process_job job, m
-								end
-								return
-							rescue Exception
-								puts "\e[1m> #{format_job job} \e[1;31mforfeiting:\e[0m #$!"
-								m['job'][job['id']]["forfeit"].post :assigned_id => job["assigned_id"] rescue nil
-
-								puts "\e[1m> \e[0;34mBlacklisting ##{job["id"]}.\e[0m"
-								@blacklist[m.to_s] ||= []
-								@blacklist[m.to_s] << job["id"]
-
-								raise $!
-							end
-						when 503
-							#puts "\e[1m> \e[0;34m#{m} has no work for us\e[0m"
-						else
-							response.return! request, result, &block
+					begin
+						with_group job["group"] do
+							process_job job, m
 						end
+					rescue Exception
+						puts "\e[1m> #{format_job job} \e[1;31mforfeiting:\e[0m #$!"
+						m.forfeit_job job["id"]
+
+						puts "\e[1m> \e[0;34mBlacklisting ##{job["id"]}.\e[0m"
+						@blacklist[m] ||= []
+						@blacklist[m] << job["id"]
+
+						raise $!
 					end
 				rescue Errno::ECONNREFUSED
-					warn "\e[1m> \e[0;33mWarning: #{m} may be down.\e[0m"
+					warn "\e[1m> \e[0;33mWarning: \e[35m#{m}\e[33m may be down.\e[0m"
 				rescue Exception
 				end
 
@@ -108,7 +151,6 @@ module Maru
 		private
 
 		def process_job job, master
-			handle = master["job"][job["id"]]
 			plugin = Maru::Plugins[job["group"]["kind"]]
 
 			if plugin.respond_to? :process_job
@@ -116,7 +158,7 @@ module Maru
 
 				puts "\e[1m  > \e[0;34mUploading results...\e[0m"
 
-				handle.post :assigned_id => job["assigned_id"], :files => files
+				master.complete_job job["id"], :files => files
 
 				files.each do |fn,f|
 					File.unlink fn
@@ -165,7 +207,7 @@ module Maru
 		def check_consistency path, sha256
 			puts "\e[1m  > \e[0;34mChecking #{path} for consistency...\e[0m"
 
-			sha256 == Digest::SHA256.file( path ).hexdigest
+			sha256 == OpenSSL::Digest::SHA256.file( path ).hexdigest
 		end
 
 		def verify_path path
