@@ -4,7 +4,7 @@ require 'data_mapper'
 require 'fileutils'
 require 'openssl'
 
-require_relative 'plugins'
+require_relative 'plugin'
 
 class Maru::Master < Sinatra::Base
 	class Group
@@ -130,24 +130,27 @@ class Maru::Master < Sinatra::Base
 	put '/group' do
 		content_type 'text/json'
 
-		if params[:kind].nil? or !Maru::Plugins.include?( params[:kind] )
+		if params[:kind].nil? or !(plugin = Maru::Plugins[params[:kind]])
 			halt 501, {:errors => ["Unsupported group kind"]}.to_json
 			next
 		end
 
-		group = Group.new( params )
-		group.id = nil
+		group      = Group.new( params )
+		group.id   = nil
+		group.kind = plugin.machine_name
 
-		if group.valid? and Maru::Plugins[group.kind].validate_group( group )
+		plugin_errors = plugin.validate_group( group ).to_a
+
+		if group.valid? and plugin_errors.empty?
 			group.save
 
-			Maru::Plugins[group.kind].create_jobs_for group
+			plugin.create_jobs_for group
 
 			warn "\e[1m> \e[0mGroup #{group.to_color}\e[0m created with \e[32m#{group.jobs.length}\e[0m jobs"
 
 			{:group => group}.to_json
 		else
-			halt 400, {:errors => group.errors.full_messages}.to_json
+			halt 400, {:errors => group.errors.full_messages + plugin_errors}.to_json
 		end
 	end
 
@@ -207,11 +210,7 @@ class Maru::Master < Sinatra::Base
 
 		worker = get_worker!
 
-		jobs = Job.all :worker => nil
-
-		unless params[:kinds].to_s.empty?
-			jobs = jobs.all :group => { :kind => params[:kinds].split( ',' ) }
-		end
+		jobs = Job.all :worker => nil, :group => { :kind => params[:kinds].split( ',' ) }
 
 		unless params[:blacklist].to_s.empty?
 			jobs = jobs.all :id.not => params[:blacklist].split( ',' ).map( &:to_i )
@@ -240,17 +239,17 @@ class Maru::Master < Sinatra::Base
 		if job.nil?
 			halt 404, JSON.dump( :error => "job not found" )
 		else
-			params[:files].each do |filename,fileinfo|
+			params[:files].each do |file|
 				begin
-					path = join_relative job.group.output_dir, filename
+					path = join_relative job.group.output_dir, file["name"]
 					FileUtils.mkdir_p File.dirname( path )
-					IO.copy_stream fileinfo[:tempfile], path
+					IO.copy_stream file["data"][:tempfile], path
 				rescue PathIsOutside
 					halt 400, JSON.dump( :error => "path leads outside of output directory" )
 				rescue Exception
 					halt 500, JSON.dump( :error => $!.to_s )
 				ensure
-					fileinfo[:tempfile].close
+					file["data"][:tempfile].close
 				end
 			end unless params[:files].nil?
 

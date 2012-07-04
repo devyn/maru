@@ -4,7 +4,7 @@ require 'rest_client'
 require 'fileutils'
 require 'openssl'
 
-require_relative 'plugins'
+require_relative 'plugin'
 
 module Maru
 	class MasterLink
@@ -56,6 +56,10 @@ module Maru
 			@resource.to_s
 		end
 
+		def id
+			OpenSSL::Digest::SHA1.hexdigest( @resource.to_s )
+		end
+
 		private
 
 		def with_authentication &blk
@@ -75,7 +79,6 @@ module Maru
 		DEFAULTS = {
 			name:         "A Worker",
 			masters:      [{"url" => "http://maru.example.org/", "key" => "totally secret key"}],
-			kinds:        nil,
 			temp_dir:     "/tmp/maru.#$$",
 			group_expiry: 7200
 		}
@@ -88,7 +91,6 @@ module Maru
 
 			@name         = config[:name]
 			@masters      = config[:masters].map { |m| Maru::MasterLink.new( m["url"], @name, m["key"] ) }
-			@kinds        = config[:kinds]
 			@temp_dir     = config[:temp_dir]
 			@group_expiry = config[:group_expiry]
 			@blacklist    = {}
@@ -104,7 +106,7 @@ module Maru
 				m = @masters[@robin]
 
 				opt = {}
-				opt[:kinds]     = @kinds.join( "," )        if @kinds
+				opt[:kinds]     = Maru::Plugin::PLUGINS.map( &:machine_name ).join( ',' )
 				opt[:blacklist] = @blacklist[m].join( ',' ) if @blacklist[m]
 
 				begin
@@ -113,7 +115,7 @@ module Maru
 
 					begin
 						puts "\e[1m> #{format_job job} \e[1;33mprocessing\e[0m"
-						with_group job["group"] do
+						with_group job["group"], m do
 							process_job job, m
 						end
 					rescue Exception
@@ -153,11 +155,13 @@ module Maru
 		def cleanup
 			if File.directory? @temp_dir
 				Dir.entries( @temp_dir ).each do |d|
-					case d
-					when '.', '..'
-					when /^group-/
-						if Time.now - File.mtime( File.join( @temp_dir, d ) ) > @group_expiry
-							FileUtils.rm_r File.join( @temp_dir, d )
+					if d =~ /^master-/
+						Dir.entries( File.join( @temp_dir, d ) ).each do |d2|
+							if d2 =~ /^group-/
+								if Time.now - File.mtime( File.join( @temp_dir, d, d2 ) ) > @group_expiry
+									FileUtils.rm_r File.join( @temp_dir, d, d2 )
+								end
+							end
 						end
 					end
 				end
@@ -167,10 +171,10 @@ module Maru
 		private
 
 		def process_job job, master
-			plugin = Maru::Plugins[job["group"]["kind"]]
+			plugin = Maru::Plugin[job["group"]["kind"]]
 
 			if plugin.respond_to? :process_job
-				files = Hash[plugin.process_job( job ).map { |f| [f, File.new( f )] }]
+				files = Hash[plugin.process_job( job ).map { |f| {"name" => f, "data" => File.new( f )} }]
 
 				puts "\e[1m  > \e[0;34mUploading results...\e[0m"
 
@@ -185,11 +189,11 @@ module Maru
 		end
 
 		def format_job job
-			"\e[0;1m##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m - \e[0;32m#{job["group"]["email"]}\e[0;1m)\e[0m"
+			"\e[0;1m##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m - \e[0;32m#{job["group"]["owner"]}\e[0;1m)\e[0m"
 		end
 
-		def with_group group
-			FileUtils.mkdir_p( path = File.join( @temp_dir, "group-#{group["id"]}" ) )
+		def with_group group, master
+			FileUtils.mkdir_p( path = File.join( @temp_dir, "master-#{master.id}", "group-#{group["id"]}" ) )
 
 			Dir.chdir path do
 				group["prerequisites"].each do |pre|
@@ -286,11 +290,13 @@ module Maru
 
 			w = Maru::Worker.new options
 
-			trap :INT do
-				exit
-			end
+			trap( :INT  ) { exit }
+			trap( :TERM ) { exit }
 
 			at_exit do
+				warn "\e[1m> \e[0;34mWaiting for child processes...\e[0m"
+				Process.waitall
+				warn "\e[1m> \e[0;34mCleaning up...\e[0m"
 				unless options[:keep_temp]
 					FileUtils.rm_rf w.temp_dir
 				end
