@@ -230,6 +230,10 @@ a:hover {
 	display: inline-block;
 }
 
+.group .info .name {
+	float: left;
+}
+
 .group .info .owner {
 	float: right;
 }
