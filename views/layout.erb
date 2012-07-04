@@ -6,23 +6,34 @@
 	</head>
 	<body>
 		<div id="header">
-			<h1 class="float-left">丸</h1>
-			<nav class="float-right">
+			<h1><a href="/">丸</a> <%== @title || "maru" %></h1>
+			<nav>
 			<ul>
 			<% if logged_in? %>
-				<li><%== @user.email %> <a href="/user/logout">(log out)</a></li>
+				<% if @user.is_admin || @user.can_own_groups %>
+					<li><a href="/group/new">new group</a></lI>
+				<% end %>
+				<% if @user.is_admin || @user.can_own_workers %>
+					<li><a href="/workers">workers</a></li>
+				<% end %>
+				<% if @user.is_admin || @user.can_manage_users %>
+					<li><a href="/users">users</a></li>
+				<% end %>
+				<li><a href="/user/preferences"><%== @user.email %></a> <a href="/user/logout">(log out)</a></li>
 			<% else %>
-				<li><a href="/user/login">log in</a></li>
+				<% if @title != "log in" %>
+					<li><a href="/user/login">log in</a></li>
+				<% end %>
 			<% end %>
 			</ul>
 			</nav>
 			<div class="clear"></div>
-			<% unless @error.nil? %>
-				<div id="error">
-					<%= markdown @error %>
-				</div>
-			<% end %>
 		</div>
+		<% if @error %>
+			<div id="error">
+				<%= markdown @error %>
+			</div>
+		<% end %>
 		<div id="content">
 			<%= yield %>
 		</div>

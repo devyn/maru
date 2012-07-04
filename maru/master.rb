@@ -87,10 +87,10 @@ class Maru::Master < Sinatra::Base
 		property :password_salt, String, :required => true, :length => 4
 
 		# Permissions
-		property :can_own_workers,      Boolean, :required => true, :default => false
-		property :can_own_groups,       Boolean, :required => true, :default => false
-		property :can_manage_users,     Boolean, :required => true, :default => false
-		property :can_modify_any_group, Boolean, :required => true, :default => false
+		property :can_own_workers,  Boolean, :required => true, :default => false
+		property :can_own_groups,   Boolean, :required => true, :default => false
+		property :can_manage_users, Boolean, :required => true, :default => false
+		property :is_admin,         Boolean, :required => true, :default => false
 
 		def password=(pass)
 			self.password_salt = rand( 36 ** 4 ).to_s( 36 )
@@ -110,7 +110,8 @@ class Maru::Master < Sinatra::Base
 
 	class PathIsOutside < Exception; end
 
-	enable :sessions
+	use Rack::Session::Cookie, :secret => "maru", :expire_after => 2592000 # 1 month
+
 	enable :static
 
 	set    :root,          File.join( File.dirname( __FILE__ ), '..' )
@@ -177,14 +178,28 @@ class Maru::Master < Sinatra::Base
 
 		def must_be_able_to_own_groups!
 			must_be_logged_in!
+			redirect to('/') unless @user.is_admin or @user.can_own_groups
+		end
 
-			redirect to('/') unless @user.can_own_groups
+		def must_be_able_to_own_workers!
+			must_be_logged_in!
+			redirect to('/') unless @user.is_admin or @user.can_own_workers
+		end
+
+		def must_be_able_to_manage_users!
+			must_be_logged_in!
+			redirect_to('/') unless @user.is_admin or @user.can_manage_users
+		end
+
+		def must_be_admin!
+			must_be_logged_in!
+			redirect_to('/') unless @user.is_admin
 		end
 	end
 
 	get '/' do
 		if logged_in?
-			if @user.can_modify_any_group
+			if @user.is_admin
 				@groups = Group.all
 			else
 				@groups = user.groups + Group.all(:public => true)
@@ -197,11 +212,15 @@ class Maru::Master < Sinatra::Base
 	end
 
 	get '/user/login' do
+		@title = "log in"
+
 		redirect to('/') if logged_in?
 		erb :user_login
 	end
 
 	post '/user/login' do
+		@title = "log in"
+
 		if user = User.first( :email => params[:email] )
 			if user.password_is? params[:password]
 				session[:user] = user.id
