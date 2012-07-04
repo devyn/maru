@@ -67,7 +67,7 @@ class Maru::Master < Sinatra::Base
 
 		property :id,             Serial
 		property :name,           String, :required => true, :length => 128, :unique  => true # The name of the worker.
-		property :authenticator,  String, :required => true, :length => 24,  :default => ->{ rand(36**24).to_s(36) }
+		property :authenticator,  String, :required => true, :length => 24,  :default => proc { rand(36**24).to_s(36) }
 		                                  # The key, but we can't call it that.
 
 		def to_color base=37
@@ -262,6 +262,7 @@ class Maru::Master < Sinatra::Base
 		group      = Group.new( params )
 		group.id   = nil
 		group.kind = plugin.machine_name
+		group.user = @user
 
 		plugin_errors = plugin.validate_group( group ).to_a
 

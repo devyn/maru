@@ -13,13 +13,20 @@ body {
 }
 
 #header {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 36px;
+	width: auto;
+
 	background-color: #202020;
 	color: #d0d0d0;
 	margin: 0;
 	padding-top: 5px;
 	padding-left: 5px;
 	padding-right: 5px;
-	font-size: 12pt;
+	font-size: 16px;
 	border-bottom: 3px solid #606060;
 }
 
@@ -87,6 +94,13 @@ a:hover {
 }
 
 #content {
+	position: absolute;
+	top: 44px;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	width: auto;
+	height: auto;
 }
 
 #login {
@@ -131,4 +145,91 @@ a:hover {
 	border: 2px outset #404040;
 	background-color: #303030;
 	color: #d0d0d0;
+}
+
+#groupsPane {
+	position: absolute;
+	left: 0;
+	width: 65%;
+	height: 100%;
+
+	background-color: #909090;
+	color: #303030;
+}
+
+#detailsPane {
+	position: absolute;
+	right: 0;
+	width: 35%;
+	height: 100%;
+
+	background-color: #303030;
+	color: #909090
+}
+
+#groupsPane > ul, #detailsPane > div {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	width: auto;
+	height: auto;
+	overflow: auto;
+	padding: 1em;
+}
+
+#groupsPane > ul {
+	list-style-type: none;
+	margin: 0;
+	border-right: 1px solid #303030;
+}
+
+#detailsPane > div {
+	border-left: 1px solid #909090;
+}
+
+.group {
+	background-color: #909090;
+	margin: 5px;
+	height: 30px;
+	overflow: hidden;
+	border-radius: 10px;
+	border: 2px solid #303030;
+	text-shadow: 1px 1px 0 #909090;
+	cursor: pointer;
+}
+
+.group .progress, .group .progress * {
+	margin: 0;
+	padding: 0;
+	height: 30px;
+}
+
+.group .progress * {
+	display: inline-block;
+}
+
+.group .progress .complete {
+	background-color: #303030;
+}
+
+.group .progress .pending {
+	background-color: #606060;
+}
+
+.group .info {
+	position: relative;
+	height: 20px;
+	padding: 5px;
+	top: -30px;
+	overflow: auto;
+}
+
+.group .info > * {
+	display: inline-block;
+}
+
+.group .info .owner {
+	float: right;
 }
