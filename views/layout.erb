@@ -1,0 +1,30 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>maru at <%== request.host %></title>
+		<link rel="stylesheet" type="text/css" href="/maru.css" media="screen"/>
+	</head>
+	<body>
+		<div id="header">
+			<h1 class="float-left">丸</h1>
+			<nav class="float-right">
+			<ul>
+			<% if logged_in? %>
+				<li><%== @user.email %> <a href="/user/logout">(log out)</a></li>
+			<% else %>
+				<li><a href="/user/login">log in</a></li>
+			<% end %>
+			</ul>
+			</nav>
+			<div class="clear"></div>
+			<% unless @error.nil? %>
+				<div id="error">
+					<%= markdown @error %>
+				</div>
+			<% end %>
+		</div>
+		<div id="content">
+			<%= yield %>
+		</div>
+	</body>
+</html>

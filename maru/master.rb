@@ -3,6 +3,8 @@ require 'json'
 require 'data_mapper'
 require 'fileutils'
 require 'openssl'
+require 'erubis'
+require 'rdiscount'
 
 require_relative 'plugin'
 
@@ -10,15 +12,18 @@ class Maru::Master < Sinatra::Base
 	class Group
 		include DataMapper::Resource
 
+		belongs_to :user
+
 		property :id,            Serial
-		property :name,          String, :required => true
-		property :details,       Json,   :default  => {}
+		property :name,          String,  :required => true, :length  => 255
+		property :details,       Json,    :default  => {}
 
-		property :kind,          String, :required => true
-		property :owner,         String
+		property :kind,          String,  :required => true, :length  => 255
 
-		property :prerequisites, Json,   :required => true, :default => []
-		property :output_dir,    String, :required => true
+		property :public,        Boolean, :required => true, :default => true
+
+		property :prerequisites, Json,    :required => true, :default => []
+		property :output_dir,    String,  :required => true, :length  => 255
 
 		timestamps :created_at
 
@@ -38,7 +43,7 @@ class Maru::Master < Sinatra::Base
 		belongs_to :worker, :required => false
 
 		property :id,           Serial
-		property :name,         String,   :required => true
+		property :name,         String,   :required => true, :length => 255
 		property :details,      Json,     :default  => {}
 
 		property :expiry,       Integer,  :required => true, :default => 3600 # in seconds after assigned_at
@@ -56,16 +61,48 @@ class Maru::Master < Sinatra::Base
 	class Worker
 		include DataMapper::Resource
 
+		belongs_to :user
+
 		has n, :jobs
 
-		property :name,           String, :key => true      # The name of the worker.
-		property :authenticator,  String, :required => true # The key, but we can't call it that.
-
-		property :verification,   String, :required => true, :default => ->{ rand(36**10).to_s(36) }
-		         # Revoke all sessions issued to the worker by changing the verification property.
+		property :id,             Serial
+		property :name,           String, :required => true, :length => 128, :unique  => true # The name of the worker.
+		property :authenticator,  String, :required => true, :length => 24,  :default => ->{ rand(36**24).to_s(36) }
+		                                  # The key, but we can't call it that.
 
 		def to_color base=37
 			"\e[33m#{self.name}\e[0m"
+		end
+	end
+
+	class User
+		include DataMapper::Resource
+
+		has n, :workers
+		has n, :groups
+
+		property :id,            Serial
+		property :email,         String, :required => true, :length => 255, :unique => true
+		property :password_hash, String, :required => true, :length => 64
+		property :password_salt, String, :required => true, :length => 4
+
+		# Permissions
+		property :can_own_workers,      Boolean, :required => true, :default => false
+		property :can_own_groups,       Boolean, :required => true, :default => false
+		property :can_manage_users,     Boolean, :required => true, :default => false
+		property :can_modify_any_group, Boolean, :required => true, :default => false
+
+		def password=(pass)
+			self.password_salt = rand( 36 ** 4 ).to_s( 36 )
+			self.password_hash = OpenSSL::HMAC.hexdigest( OpenSSL::Digest::SHA256.new, self.password_salt, pass )
+		end
+
+		def password_is?(pass)
+			OpenSSL::HMAC.hexdigest( OpenSSL::Digest::SHA256.new, self.password_salt, pass ) == self.password_hash
+		end
+
+		def to_color base=37
+			"\e[32m#{email}\e[0m"
 		end
 	end
 
@@ -74,6 +111,14 @@ class Maru::Master < Sinatra::Base
 	class PathIsOutside < Exception; end
 
 	enable :sessions
+	enable :static
+
+	set    :root,          File.join( File.dirname( __FILE__ ), '..' )
+
+	set    :views,         -> { File.join( root, 'views'  ) }
+	set    :public_folder, -> { File.join( root, 'static' ) }
+
+	set    :erubis,        :escape_html => true
 
 	configure do
 		DataMapper.setup( :default, ENV["DATABASE_URL"] || "sqlite://#{Dir.pwd}/maru.db" )
@@ -95,6 +140,12 @@ class Maru::Master < Sinatra::Base
 		end
 	end
 
+	before do
+		if session[:user]
+			@user = User.get( session[:user] )
+		end
+	end
+
 	helpers do
 		def generate_id
 			rand( 36 ** 12 ).to_s( 36 )
@@ -109,30 +160,84 @@ class Maru::Master < Sinatra::Base
 		end
 
 		def get_worker
-			Worker.first :name => session[:worker], :verification => session[:verification]
+			Worker.first :id => session[:worker], :authenticator => session[:authenticator]
 		end
 
 		def get_worker!
 			get_worker or halt(403, {"Content-Type" => "text/plain"}, "Who are you? Worker, authenticate!")
 		end
+
+		def logged_in?
+			!@user.nil?
+		end
+
+		def must_be_logged_in!
+			redirect to('/user/login') if not logged_in?
+		end
+
+		def must_be_able_to_own_groups!
+			must_be_logged_in!
+
+			redirect to('/') unless @user.can_own_groups
+		end
 	end
 
 	get '/' do
-		# Status page
+		if logged_in?
+			if @user.can_modify_any_group
+				@groups = Group.all
+			else
+				@groups = user.groups + Group.all(:public => true)
+			end
+		else
+			@groups = Group.all(:public => true)
+		end
+
+		erb :index
+	end
+
+	get '/user/login' do
+		redirect to('/') if logged_in?
+		erb :user_login
+	end
+
+	post '/user/login' do
+		if user = User.first( :email => params[:email] )
+			if user.password_is? params[:password]
+				session[:user] = user.id
+				redirect to('/')
+			else
+				@error = "Wrong email or password."
+				erb :user_login
+			end
+		else
+			@error = "Wrong email or password."
+			erb :user_login
+		end
+	end
+
+	get '/user/logout' do
+		session[:user] = nil
+		redirect to('/')
+	end
+
+	get '/users' do
+		# Manage users
 		halt 501
 	end
 
-	get '/group/new/:kind' do
-		# Form for creating groups
-		halt 501
+	get '/group/new' do
+		must_be_able_to_own_groups!
+
+		erb :group_new
 	end
 
-	put '/group' do
-		content_type 'text/json'
+	post '/group/new' do
+		must_be_able_to_own_groups!
 
 		if params[:kind].nil? or !(plugin = Maru::Plugins[params[:kind]])
-			halt 501, {:errors => ["Unsupported group kind"]}.to_json
-			next
+			@error = "- unsupported group kind"
+			halt 501, erb(:group_new)
 		end
 
 		group      = Group.new( params )
@@ -148,9 +253,11 @@ class Maru::Master < Sinatra::Base
 
 			warn "\e[1m> \e[0mGroup #{group.to_color}\e[0m created with \e[32m#{group.jobs.length}\e[0m jobs"
 
-			{:group => group}.to_json
+			redirect to('/')
 		else
-			halt 400, {:errors => group.errors.full_messages + plugin_errors}.to_json
+			@error = (group.errors.full_messages + plugin_errors).map {|s| "- #{s}"}.join("\n")
+
+			halt 400, erb(:group_new)
 		end
 	end
 
@@ -170,7 +277,7 @@ class Maru::Master < Sinatra::Base
 		halt 501
 	end
 
-	delete '/group/:id' do
+	get '/group/:id/delete' do
 		# Deletes a group
 		halt 501
 	end
@@ -190,16 +297,14 @@ class Maru::Master < Sinatra::Base
 			target = Worker.first :name => params[:name]
 
 			if target and params[:response] == OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, target.authenticator, session[:challenge])
-				session[:worker]       = target.name
-				session[:verification] = target.verification
-				session[:challenge]    = nil
+				session[:worker]        = target.id
+				session[:authenticator] = target.authenticator
+				session[:challenge]     = nil
 				"Authentication successful."
 			else
 				session[:challenge] = nil
 				halt 403, "Authentication failed. You'll have to get another challenge."
 			end
-
-			session[:challenge] = nil
 		else
 			halt 400, "You must first obtain a challenge. (GET /worker/authenticate)"
 		end

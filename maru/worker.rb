@@ -189,7 +189,7 @@ module Maru
 		end
 
 		def format_job job
-			"\e[0;1m##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m - \e[0;32m#{job["group"]["owner"]}\e[0;1m)\e[0m"
+			"\e[0;1m##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m - \e[0;32m#{job["group"]["user_email"]}\e[0;1m)\e[0m"
 		end
 
 		def with_group group, master
