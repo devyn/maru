@@ -37,7 +37,7 @@ module Maru
 				res = @resource[:job].get(:params => params)
 				case res.code
 				when 200
-					JSON.parse(res)
+					JSON.parse(res)["job"]
 				when 204
 					raise NoJobsAvailable
 				end
@@ -49,7 +49,7 @@ module Maru
 		end
 
 		def forfeit_job(id)
-			with_authentication { @resource[:job][id][:forfeit].post }
+			with_authentication { @resource[:job][id][:forfeit].post nil }
 		end
 
 		def to_s
@@ -111,14 +111,13 @@ module Maru
 					job = m.request_job(opt)
 					got_work = true
 
-					puts "\e[1m> #{format_job job} \e[1;33mprocessing\e[0m"
-
 					begin
+						puts "\e[1m> #{format_job job} \e[1;33mprocessing\e[0m"
 						with_group job["group"] do
 							process_job job, m
 						end
 					rescue Exception
-						puts "\e[1m> #{format_job job} \e[1;31mforfeiting:\e[0m #$!"
+						puts "\e[1m> #{format_job job} \e[1;31mforfeiting:\e[0m #$! at #{$!.backtrace.first}"
 						m.forfeit_job job["id"]
 
 						puts "\e[1m> \e[0;34mBlacklisting ##{job["id"]}.\e[0m"
@@ -131,7 +130,7 @@ module Maru
 					warn "\e[1m> \e[0;33mWarning: \e[35m#{m}\e[33m may be down.\e[0m"
 				rescue Maru::MasterLink::NoJobsAvailable
 				rescue SystemExit
-					exit
+					raise $!
 				rescue Exception
 					warn "\e[1m> \e[0;31mUnhandled exception:\e[0m"
 					warn "  #{$!.class.name}: #{$!.message}"

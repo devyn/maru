@@ -81,12 +81,16 @@ class Maru::Master < Sinatra::Base
 
 		@@expiry_check = Thread.start do
 			loop do
-				Job.all( :worker.not => nil, :completed_at => nil ).each do |job|
-					if Time.now - job.assigned_at > job.expiry
-						job.update :worker => nil
+				begin
+					Job.all( :worker.not => nil, :completed_at => nil ).each do |job|
+						if Time.now - job.assigned_at.to_time > job.expiry
+							Kernel.warn "\e[1m>\e[0m Reaping #{job.to_color} (expired)"
+							job.update :worker => nil
+						end
 					end
+					sleep 60
+				rescue Exception
 				end
-				sleep 60
 			end
 		end
 	end
@@ -222,7 +226,7 @@ class Maru::Master < Sinatra::Base
 
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;33massigned to \e[0m#{worker.to_color}"
 
-			%{{"job":#{job.to_json( :relationships => { :worker => { :include => [:name] }, :group => { :exclude => [:output_dir] } } )}}}
+			%{{"job":#{job.to_json( :relationships => { :group => { :exclude => [:output_dir] } } )}}}
 		end
 	end
 
@@ -268,7 +272,7 @@ class Maru::Master < Sinatra::Base
 		if job.nil?
 			halt 404, JSON.dump( :error => "job not found" )
 		else
-			job.update :assigned_id => nil, :assigned_at => nil
+			job.update :worker => nil, :assigned_at => nil
 
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;31mforfeited by \e[0m#{worker.to_color}"
 
