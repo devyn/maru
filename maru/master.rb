@@ -92,7 +92,6 @@ class Maru::Master < Sinatra::Base
 		# Permissions
 		property :can_own_workers,  Boolean, :required => true, :default => false
 		property :can_own_groups,   Boolean, :required => true, :default => false
-		property :can_manage_users, Boolean, :required => true, :default => false
 		property :is_admin,         Boolean, :required => true, :default => false
 
 		# Session revocation
@@ -251,27 +250,55 @@ class Maru::Master < Sinatra::Base
 		redirect to('/')
 	end
 
-	get '/users' do
-		# Manage users
+	get '/admin' do
+		# The chair in the sky
 		halt 501
 	end
 
-	get '/user/new' do
+	post '/worker/new' do
+		# Register a worker
+		halt 501
+	end
+
+	post '/worker/:id/key/regenerate' do
+		# Regenerate the key for a worker and invalidate its sessions.
+		halt 501
+	end
+
+	post '/worker/:id/delete' do
+		# Unregister a worker
+		halt 501
+	end
+
+	post '/user/new' do
+		# Create a user
+		halt 501
 	end
 
 	get '/user/preferences' do
+		# Change your password, register workers, etc.
+		halt 501
 	end
 
-	get '/user/:id' do
+	get '/user/:id/preferences' do
+		# Change others' passwords, manage their workers, etc.
+		halt 501
 	end
 
-	get '/workers' do
+	post '/user/:id/password' do
+		# Changes a user's password.
+		# Requires old password unless caller is an admin.
+		halt 501
 	end
 
-	get '/worker/new' do
+	post '/user/:id/logout' do
+		# Logs a user out of all sessions by changing valid_before.
+		halt 501
 	end
 
-	get '/worker/:id' do
+	post '/user/:id/delete' do
+		# Deletes a user account.
+		halt 501
 	end
 
 	get '/group/new' do
@@ -326,7 +353,7 @@ class Maru::Master < Sinatra::Base
 		halt 501
 	end
 
-	get '/group/:id/delete' do
+	post '/group/:id/delete' do
 		# Deletes a group
 		halt 501
 	end

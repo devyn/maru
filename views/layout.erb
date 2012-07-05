@@ -14,11 +14,8 @@
 				<% if @user.is_admin || @user.can_own_groups %>
 					<li><a href="/group/new">new group</a></lI>
 				<% end %>
-				<% if @user.is_admin || @user.can_own_workers %>
-					<li><a href="/workers">workers</a></li>
-				<% end %>
-				<% if @user.is_admin || @user.can_manage_users %>
-					<li><a href="/users">users</a></li>
+				<% if @user.is_admin %>
+					<li><a href="/admin">admin</a></li>
 				<% end %>
 				<li><a href="/user/preferences"><%== @user.email %></a> <a href="/user/logout">(log out)</a></li>
 			<% else %>
