@@ -21,9 +21,10 @@ module Maru
 			auth      = @resource[:"worker/authenticate"]
 			challenge = auth.get
 			response  = OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, @worker_key, challenge)
-			result    = auth.post( { :name => @worker_name, :response => response }, :cookies => challenge.cookies )
+			result    = auth.post( { :name => @worker_name, :response => response }, "Cookie" => cookie(challenge.cookies) )
 
-			@resource.options[:cookies] = result.cookies
+			@resource.options[:headers]         ||= {}
+			@resource.options[:headers]["Cookie"] = cookie(result.cookies)
 
 			warn "\e[1m> \e[0;34mAuthenticated with \e[35m#{@resource}\e[0m"
 			true
@@ -70,6 +71,14 @@ module Maru
 			else
 				raise CanNotAuthenticate, @resource.to_s
 			end
+		end
+
+		def cookie(h)
+			# RestClient appears to handle escaped cookies weirdly,
+			# so we correct that by setting the "Cookie" header ourselves.
+			# The keys and values are already escaped, but when passing them
+			# through to :cookies, they seem to become unescaped.
+			h.map { |k,v| "#{k}=#{v}" }.join( ';' )
 		end
 	end
 
