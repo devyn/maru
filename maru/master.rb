@@ -349,7 +349,7 @@ class Maru::Master < Sinatra::Base
 
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;33massigned to \e[0m#{worker.to_color}"
 
-			%{{"job":#{job.to_json( :relationships => { :group => { :exclude => [:output_dir] } } )}}}
+			%{{"job":#{job.to_json( :exclude => [:worker_id, :user_id], :relationships => {:group => {:exclude => [:output_dir], :relationships => {:user => {:only => [:email]}}}} )}}}
 		end
 	end
 

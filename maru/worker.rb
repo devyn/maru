@@ -1,5 +1,6 @@
 require 'json'
 require 'yaml'
+require 'uri'
 require 'rest_client'
 require 'fileutils'
 require 'openssl'
@@ -59,6 +60,10 @@ module Maru
 
 		def id
 			OpenSSL::Digest::SHA1.hexdigest( @resource.to_s )
+		end
+
+		def uri
+			URI.parse(@resource.url)
 		end
 
 		private
@@ -123,15 +128,15 @@ module Maru
 					got_work = true
 
 					begin
-						puts "\e[1m> #{format_job job} \e[1;33mprocessing\e[0m"
+						puts "\e[1m> #{format_job job, m} \e[1;33mprocessing\e[0m"
 						with_group job["group"], m do
 							process_job job, m
 						end
 					rescue Exception
-						puts "\e[1m> #{format_job job} \e[1;31mforfeiting:\e[0m #$! at #{$!.backtrace.first}"
+						puts "\e[1m> #{format_job job, m} \e[1;31mforfeiting:\e[0m #$! at #{$!.backtrace.first}"
 						m.forfeit_job job["id"]
 
-						puts "\e[1m> \e[0;34mBlacklisting ##{job["id"]}.\e[0m"
+						puts "\e[1m> \e[0;34mBlacklisting #{m.uri.host}##{job["id"]}.\e[0m"
 						@blacklist[m] ||= []
 						@blacklist[m] << job["id"]
 
@@ -193,12 +198,12 @@ module Maru
 					File.unlink fn
 				end
 
-				puts "\e[1m> #{format_job job} \e[1;32mdone\e[0m"
+				puts "\e[1m> #{format_job job, master} \e[1;32mdone\e[0m"
 			end
 		end
 
-		def format_job job
-			"\e[0;1m##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m - \e[0;32m#{job["group"]["user_email"]}\e[0;1m)\e[0m"
+		def format_job job, master
+			"\e[0;33m#{master.uri.host}\e[0;1m##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m - \e[0;32m#{job["group"]["user"]["email"]}\e[0;1m)\e[0m"
 		end
 
 		def with_group group, master
