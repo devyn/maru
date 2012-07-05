@@ -256,6 +256,24 @@ class Maru::Master < Sinatra::Base
 		halt 501
 	end
 
+	get '/user/new' do
+	end
+
+	get '/user/preferences' do
+	end
+
+	get '/user/:id' do
+	end
+
+	get '/workers' do
+	end
+
+	get '/worker/new' do
+	end
+
+	get '/worker/:id' do
+	end
+
 	get '/group/new' do
 		must_be_able_to_own_groups!
 
