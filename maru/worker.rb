@@ -203,7 +203,7 @@ module Maru
 		end
 
 		def format_job job, master
-			"\e[0;33m#{master.uri.host}\e[0;1m##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m - \e[0;32m#{job["group"]["user"]["email"]}\e[0;1m)\e[0m"
+			"\e[1;33m#{master.uri.host}##{job["id"]} \e[0;1m(\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m - \e[0;32m#{job["group"]["user"]["email"]}\e[0;1m)\e[0m"
 		end
 
 		def with_group group, master
