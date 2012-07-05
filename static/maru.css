@@ -309,3 +309,7 @@ a:hover {
 #processing-jobs td {
 	padding-left: 1em;
 }
+
+#group-new label {
+	display: block;
+}

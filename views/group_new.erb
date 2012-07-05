@@ -1,1 +1,31 @@
-...
+<form id="group-new" method="POST">
+	<label for="name">
+		Name<br/>
+		<input name="name"/>
+	</label>
+	<label for="kind">
+		Kind<br/>
+		<select name="kind">
+		<% Maru::Plugin::PLUGINS.each do |pl| %>
+			<option value="<%= pl.machine_name %>"><%== pl.human_name %></option>
+		<% end %>
+		</select>
+	</label>
+	<label for="public">
+		Public
+		<input type="checkbox" name="public" value="true"/>
+	</label>
+	<label for="output_dir">
+		Output directory<br/>
+		<input name="output_dir"/>
+	</label>
+	<label for="details">
+		Details (JSON; kind-specific)<br/>
+		<input name="details"/>
+	</label>
+	<label for="prerequisites">
+		Prerequisites (JSON; array of <code>{"source","destination","sha256"}</code> objects)<br/>
+		<input name="prerequisites"/>
+	</label>
+	<input type="submit" value="Create group and jobs"/>
+</form>

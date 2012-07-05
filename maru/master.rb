@@ -265,7 +265,7 @@ class Maru::Master < Sinatra::Base
 	post '/group/new' do
 		must_be_able_to_own_groups!
 
-		if params[:kind].nil? or !(plugin = Maru::Plugins[params[:kind]])
+		if params[:kind].nil? or !(plugin = Maru::Plugin[params[:kind]])
 			@error = "- unsupported group kind"
 			halt 501, erb(:group_new)
 		end
