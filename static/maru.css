@@ -214,7 +214,7 @@ a:hover {
 	background-color: #303030;
 }
 
-.group .progress .pending {
+.group .progress .processing {
 	background-color: #606060;
 }
 
@@ -256,6 +256,10 @@ a:hover {
 	border-bottom: 1px solid #606060;
 }
 
+#status {
+	padding-left: 1em;
+}
+
 #status div::before {
 	display: inline-block;
 	width: 7em;
@@ -265,8 +269,8 @@ a:hover {
 	content: "complete: ";
 }
 
-#status .pending::before {
-	content: "pending: ";
+#status .processing::before {
+	content: "processing: ";
 }
 
 #status .remaining::before {
@@ -277,21 +281,20 @@ a:hover {
 	content: " job(s)";
 }
 
-#pending-jobs {
+#processing-jobs {
 	width: 100%;
 }
 
-#pending-jobs tr {
+#processing-jobs tr {
 	text-align: left;
 }
 
-#pending-jobs th {
+#processing-jobs th {
 	padding-left: 1em;
 	color: #606060;
 	font-weight: normal;
 }
 
-#pending-jobs td {
+#processing-jobs td {
 	padding-left: 1em;
-	border: 1px solid #606060;
 }

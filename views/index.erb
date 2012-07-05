@@ -3,8 +3,8 @@
 		<% @groups.each do |group| %>
 			<li class="group">
 				<div class="progress">
-					<% n_total = group.jobs.length; n_complete = group.jobs(:completed_at.not => nil).length; n_pending = group.jobs(:worker.not => nil, :completed_at => nil).length %>
-					<div class="complete" style="width:<%= n_complete/n_total.to_f*100 %>%;"></div><div class="pending" style="width:<%= n_pending/n_total.to_f*100 %>%;"></div>
+					<% n_total = group.jobs.length; n_complete = group.jobs(:completed_at.not => nil).length; n_processing = group.jobs(:worker.not => nil, :completed_at => nil).length %>
+					<div class="complete" style="width:<%= n_complete/n_total.to_f*100 %>%;"></div><div class="processing" style="width:<%= n_processing/n_total.to_f*100 %>%;"></div>
 				</div>
 				<div class="info">
 					<div class="name"><%== group.name %></div>
