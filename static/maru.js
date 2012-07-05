@@ -1,21 +1,23 @@
 function selectJob(el) {
 	var curSel = document.querySelector(".group.selected");
 	if (curSel && curSel.id !== el.id) {
-		curSel.className = curSel.className.replace(/ *selected */, '');
+		curSel.className = 'group';
 	}
 
 	var details = document.getElementById("details");
 
 	if (el.className.match(/selected/)) {
-		el.className = el.className.replace(/ *selected */, '');
+		el.className = 'group';
 		details.innerHTML = "";
 	} else {
 		var req = new XMLHttpRequest();
 		req.onreadystatechange = function() {
 			if (req.readyState === 4) {
 				if (req.status === 200) {
-					el.className += ' selected';
+					el.className = 'group selected';
 					details.innerHTML = req.response;
+				} else {
+					details.innerHTML = "";
 				}
 			}
 		};
