@@ -196,7 +196,8 @@ a:hover {
 	overflow: hidden;
 	border-radius: 10px;
 	border: 2px solid #303030;
-	text-shadow: 1px 1px 0 #909090;
+	text-shadow: 0 0 3px #202020;
+	color: #d0d0d0;
 	cursor: pointer;
 
 	box-shadow: 0 0 0 #ffffff;
