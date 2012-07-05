@@ -161,7 +161,7 @@ class Maru::Master < Sinatra::Base
 		end
 
 		def get_worker
-			Worker.first :id => session[:worker], :authenticator => session[:authenticator]
+			Worker.first :id => session[:worker]
 		end
 
 		def get_worker!
@@ -318,7 +318,6 @@ class Maru::Master < Sinatra::Base
 
 			if target and params[:response] == OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, target.authenticator, session[:challenge])
 				session[:worker]        = target.id
-				session[:authenticator] = target.authenticator
 				session[:challenge]     = nil
 				"Authentication successful."
 			else
