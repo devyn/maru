@@ -30,10 +30,22 @@ function setGroupOnclicks() {
 	var groups = document.getElementsByClassName("group");
 
 	for (var i = 0; i < groups.length; i++) {
-		groups[i].onclick = function() {selectJob(this)};
+		groups[i].onclick = function () {selectJob(this)};
 	}
 }
 
-window.addEventListener('load', function() {
+function hideError() {
+	this.style.opacity = 0;
+	this.addEventListener('transitionend',       function () { this.style.display = 'none'; }, true);
+	this.addEventListener('webkitTransitionEnd', function () { this.style.display = 'none'; }, true);
+	this.addEventListener('oTransitionEnd',      function () { this.style.display = 'none'; }, true);
+}
+
+window.addEventListener('load', function () {
 	setGroupOnclicks();
+
+	var error = document.getElementById("error");
+	if (error) {
+		error.onclick = hideError;
+	}
 });
