@@ -1,0 +1,27 @@
+<h1><%== group.name %></h1>
+<h2><%== group.kind.machine_name_to_human_name %></h2>
+
+<h3>Status</h3>
+<div id="status">
+	<div class="complete"><%== group.jobs( :completed_at.not => nil ).length %></div>
+	<div class="pending"><%== (pending = group.jobs( :worker.not => nil, :completed_at => nil )).length %></div>
+	<div class="remaining"><%== group.jobs( :worker => nil ).length %></div>
+</div>
+
+<h3>Pending jobs</h3>
+<table id="pending-jobs">
+	<thead>
+		<tr>
+			<th>Name</th>
+			<th>Worker</th>
+		</tr>
+	</thead>
+	<tbody>
+	<% pending.each do |job| %>
+		<tr>
+			<td><%== job.name %></td>
+			<td><%== job.worker.name %></td>
+		</tr>
+	<% end %>
+	</tbody>
+</table>

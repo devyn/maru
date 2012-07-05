@@ -237,3 +237,60 @@ a:hover {
 .group .info .owner {
 	float: right;
 }
+
+#details h1 {
+	font-size: 20pt;
+	color: #c0c0c0;
+}
+
+#details h2 {
+	font-size: 14pt;
+	color: #a0a0a0;
+}
+
+#details h3 {
+	font-size: 12pt;
+	color: #808080;
+	padding-left: 1em;
+	padding-bottom: 0.5em;
+	border-bottom: 1px solid #606060;
+}
+
+#status div::before {
+	display: inline-block;
+	width: 7em;
+}
+
+#status .complete::before {
+	content: "complete: ";
+}
+
+#status .pending::before {
+	content: "pending: ";
+}
+
+#status .remaining::before {
+	content: "remaining: ";
+}
+
+#status div::after {
+	content: " job(s)";
+}
+
+#pending-jobs {
+	width: 100%;
+}
+
+#pending-jobs tr {
+	text-align: left;
+}
+
+#pending-jobs th {
+	color: #606060;
+	font-weight: normal;
+}
+
+#pending-jobs td {
+	padding-left: 1em;
+	border: 1px solid #606060;
+}

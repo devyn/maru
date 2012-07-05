@@ -2,6 +2,10 @@ class String
 	def to_const(root=Object)
 		split( / *\/ */ ).inject( root ) { |c,e| c.const_get( e.sub( /^([a-z])/ ) { $1.upcase }.gsub( /[ _]([A-Za-z])/ ) { $1.upcase }.gsub( ' ', '' ) ) }
 	end
+
+	def machine_name_to_human_name
+		gsub( '/', ' / ' ).gsub( '_', ' ' ).gsub( /\b([A-Za-z])/ ) { $1.upcase }
+	end
 end
 
 class Module

@@ -17,6 +17,6 @@
 
 <div id="detailsPane">
 	<div id="details">
-		details go here&hellip;
+		<%= erb :details, :locals => { group: Group.first } %>
 	</div>
 </div>

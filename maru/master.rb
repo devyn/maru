@@ -70,6 +70,9 @@ class Maru::Master < Sinatra::Base
 		property :authenticator,  String, :required => true, :length => 24,  :default => proc { rand(36**24).to_s(36) }
 		                                  # The key, but we can't call it that.
 
+		# Session revocation
+		property :invalid_before, DateTime, :required => true, :default => proc { Time.now }
+
 		def to_color base=37
 			"\e[33m#{self.name}\e[0m"
 		end
@@ -91,6 +94,9 @@ class Maru::Master < Sinatra::Base
 		property :can_own_groups,   Boolean, :required => true, :default => false
 		property :can_manage_users, Boolean, :required => true, :default => false
 		property :is_admin,         Boolean, :required => true, :default => false
+
+		# Session revocation
+		property :invalid_before, DateTime, :required => true, :default => Time.at(0)
 
 		def password=(pass)
 			self.password_salt = rand( 36 ** 4 ).to_s( 36 )
@@ -142,8 +148,12 @@ class Maru::Master < Sinatra::Base
 	end
 
 	before do
-		if session[:user]
-			@user = User.get( session[:user] )
+		if session[:user] and session[:user_authenticated_at]
+			@user = User.first( :id => session[:user], :invalid_before.lt => session[:user_authenticated_at] )
+		end
+
+		if session[:worker] and session[:worker_authenticated_at]
+			@worker = Worker.first( :id => session[:worker], :invalid_before.lt => session[:worker_authenticated_at] )
 		end
 	end
 
@@ -161,7 +171,7 @@ class Maru::Master < Sinatra::Base
 		end
 
 		def get_worker
-			Worker.first :id => session[:worker]
+			@worker
 		end
 
 		def get_worker!
@@ -224,6 +234,7 @@ class Maru::Master < Sinatra::Base
 		if user = User.first( :email => params[:email] )
 			if user.password_is? params[:password]
 				session[:user] = user.id
+				session[:user_authenticated_at] = Time.now
 				redirect to('/')
 			else
 				@error = "Wrong email or password."
@@ -317,8 +328,9 @@ class Maru::Master < Sinatra::Base
 			target = Worker.first :name => params[:name]
 
 			if target and params[:response] == OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, target.authenticator, session[:challenge])
-				session[:worker]        = target.id
-				session[:challenge]     = nil
+				session[:worker]                  = target.id
+				session[:worker_authenticated_at] = Time.now
+				session[:challenge]               = nil
 				"Authentication successful."
 			else
 				session[:challenge] = nil
