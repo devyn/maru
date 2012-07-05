@@ -198,6 +198,17 @@ a:hover {
 	border: 2px solid #303030;
 	text-shadow: 1px 1px 0 #909090;
 	cursor: pointer;
+
+	box-shadow: 0 0 0 #ffffff;
+
+	-moz-transition: box-shadow 0.1s ease-in;
+	-webkit-transition: box-shadow 0.1s ease-in;
+	-ms-transition: box-shadow 0.1s ease-in;
+	-o-transition: box-shadow 0.1s ease-in;
+}
+
+.group.selected {
+	box-shadow: 0 0 10px #d09040;
 }
 
 .group .progress, .group .progress * {

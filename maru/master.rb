@@ -313,6 +313,14 @@ class Maru::Master < Sinatra::Base
 		halt 501
 	end
 
+	get '/group/:id/details' do
+		if @group = Group.get(params[:id])
+			erb :details, :layout => false
+		else
+			halt 404
+		end
+	end
+
 	# The following should check the user agent to ensure it's a Maru worker and not a browser
 
 	get '/worker/authenticate' do
