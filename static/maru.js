@@ -63,6 +63,28 @@ function flash(el, type) {
 	el.style.oAnimation = type + " 3s";
 }
 
+function changePassword(user, formEl) {
+	var req = new XMLHttpRequest();
+
+	req.onreadystatechange = function () {
+		if (req.readyState == 4) {
+			if (req.status == 200) {
+				var inputs = formEl.querySelectorAll("input:not([type='submit'])");
+				for (var i = 0; i < inputs.length; i++) {
+					inputs[i].value = "";
+				}
+
+				flash(formEl.querySelector("input[type='submit']"), "flash-box-success");
+			} else {
+				flash(formEl.querySelector("input[type='submit']"), "flash-box-error");
+			}
+		}
+	};
+
+	req.open("POST", "/user/" + user + "/password");
+	req.send(new FormData(formEl));
+}
+
 window.addEventListener('load', function () {
 	setGroupOnclicks();
 

@@ -1,7 +1,7 @@
 <div id="user-preferences" class="single-pane">
 	<div>
 		<h1>Change password</h1>
-		<form id="change-password" onsubmit="changePassword(<%== @target_user.id %>, this);">
+		<form id="change-password" onsubmit="changePassword(<%== @target_user.id %>, this); return false;">
 		<% unless @user.is_admin and @user != @target_user %>
 			<label for="current_password">
 				Current password<br/>

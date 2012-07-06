@@ -290,9 +290,24 @@ class Maru::Master < Sinatra::Base
 	end
 
 	post '/user/:id/password' do
-		# Changes a user's password.
-		# Requires old password unless caller is an admin.
-		halt 501
+		must_be_logged_in!
+
+		halt 404 unless @target_user = User.get(params[:id])
+		halt 400 unless params[:new_password] == params[:confirm_password]
+
+		if @user == @target_user
+			if @user.password_is? params[:current_password]
+				@user.password = params[:new_password]
+				halt 500 if !@user.save
+			else
+				halt 400
+			end
+		elsif @user.is_admin
+			@target_user.password = params[:new_password]
+			halt 500 if !@target_user.save
+		else
+			halt 403
+		end
 	end
 
 	post '/user/:id/logout' do
