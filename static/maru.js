@@ -57,10 +57,10 @@ function flash(el, type) {
 	el.addEventListener('webkitAnimationEnd', animationend, true);
 	el.addEventListener('oAnimationEnd', animationend, true);
 
-	el.style.animation = type + " 3s";
-	el.style.mozAnimation = type + " 3s";
-	el.style.webkitAnimation = type + " 3s";
-	el.style.oAnimation = type + " 3s";
+	el.style.animation = type + " 1s";
+	el.style.mozAnimation = type + " 1s";
+	el.style.webkitAnimation = type + " 1s";
+	el.style.oAnimation = type + " 1s";
 }
 
 function changePassword(user, formEl) {
