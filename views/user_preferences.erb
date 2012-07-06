@@ -19,23 +19,30 @@
 			<input type="submit" value="Change password"/>
 		</form>
 	</div>
+<% if @target_user.can_own_workers or @target_user.is_admin %>
 	<div>
 		<h1>Workers</h1>
 		<ul id="workers">
-		<% @user.workers.each do |worker| %>
-			<li>
+		<% @target_user.workers( :deleted => false ).each do |worker| %>
+			<li id="worker-<%== worker.id %>">
 				<div class="name"><%== worker.name %></div>
 				<div class="key"><%== worker.authenticator %></div>
 				<nav>
 				<ul>
-					<li>regenerate key</li>
-					<li>delete</li>
+					<li><a onclick="regenerateKeyForWorker(<%== worker.id %>, this);">regenerate key</a></li>
+					<li><a onclick="deleteWorker(<%== worker.id %>, this);">delete</a></li>
 				</ul>
 				</nav>
 			</li>
 		<% end %>
+			<li id="workers-item-add">
+				<form id="add-worker" onsubmit="addWorker(this); return false;">
+					<input name="name"/> <input type="submit" value="add" />
+				</form>
+			</li>
 		</ul>
 	</div>
+<% end %>
 	<div>
 		<h1>Tasks</h1>
 		<nav class="vertical">

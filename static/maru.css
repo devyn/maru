@@ -143,6 +143,7 @@ a, a:visited {
 
 a:hover {
 	text-decoration: underline;
+	cursor: pointer;
 }
 
 #error {
@@ -489,3 +490,13 @@ a:hover {
 	margin-top: 0.5em;
 }
 
+#user-preferences #workers input:not([type="submit"]) {
+	width: 200px;
+	height: 16px;
+}
+
+#user-preferences #workers input[type="submit"] {
+	border-radius: 5px;
+	padding: 0.5em;
+	font-size: 12px;
+}

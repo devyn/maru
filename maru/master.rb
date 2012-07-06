@@ -70,6 +70,8 @@ class Maru::Master < Sinatra::Base
 		property :authenticator,  String, :required => true, :length => 24,  :default => proc { rand(36**24).to_s(36) }
 		                                  # The key, but we can't call it that.
 
+		property :deleted,        Boolean, :required => true, :default => false # We can't actually destroy workers that have done work.
+
 		# Session revocation
 		property :invalid_before, DateTime, :required => true, :default => proc { Time.now }
 
@@ -152,7 +154,7 @@ class Maru::Master < Sinatra::Base
 		end
 
 		if session[:worker] and session[:worker_authenticated_at]
-			@worker = Worker.first( :id => session[:worker], :invalid_before.lt => session[:worker_authenticated_at] )
+			@worker = Worker.first( :id => session[:worker], :invalid_before.lt => session[:worker_authenticated_at], :deleted => false )
 		end
 	end
 
@@ -256,18 +258,61 @@ class Maru::Master < Sinatra::Base
 	end
 
 	post '/worker/new' do
-		# Register a worker
-		halt 501
+		must_be_able_to_own_workers!
+
+		@worker = Worker.new :user => @user, :name => params[:name]
+
+		content_type "application/json"
+		if @worker.save
+			{:worker => @worker}.to_json
+		else
+			halt 400, {:errors => @worker.errors.full_messages}.to_json
+		end
 	end
 
 	post '/worker/:id/key/regenerate' do
-		# Regenerate the key for a worker and invalidate its sessions.
-		halt 501
+		must_be_able_to_own_workers!
+
+		@worker = Worker.get(params[:id])
+
+		halt 404 unless @worker
+		halt 403 unless @user.is_admin or @user == @worker.user
+
+		@worker.authenticator = rand(36**24).to_s(36)
+		@worker.invalid_before = Time.now
+
+		content_type "application/json"
+		if @worker.save
+			{:worker => @worker}.to_json
+		else
+			halt 400, {:errors => @worker.errors.full_messages}.to_json
+		end
 	end
 
 	post '/worker/:id/delete' do
-		# Unregister a worker
-		halt 501
+		must_be_able_to_own_workers!
+
+		@worker = Worker.get(params[:id])
+
+		halt 404 unless @worker
+		halt 403 unless @user.is_admin or @user == @worker.user
+
+		if @worker.destroy
+			halt 204 # no content
+		else
+			# forfeit all jobs the worker is currently working on
+			@worker.jobs( :completed_at => nil ).each do |job|
+				job.worker = nil
+				job.assigned_at = nil
+				job.save
+			end
+
+			if @worker.update :deleted => true
+				halt 204
+			else
+				halt 500
+			end
+		end
 	end
 
 	post '/user/new' do
@@ -397,7 +442,7 @@ class Maru::Master < Sinatra::Base
 		content_type "text/plain"
 
 		if session[:challenge]
-			target = Worker.first :name => params[:name]
+			target = Worker.first :name => params[:name], :deleted => false
 
 			if target and params[:response] == OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, target.authenticator, session[:challenge])
 				session[:worker]                  = target.id
