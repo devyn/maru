@@ -132,6 +132,10 @@ class Maru::Master < Sinatra::Base
 		DataMapper.setup( :default, ENV["DATABASE_URL"] || "sqlite://#{Dir.pwd}/maru.db" )
 		DataMapper.auto_upgrade!
 
+		if User.all.empty?
+			User.create :email => "maru@example.com", :password => "maru", :is_admin => true
+		end
+
 		@@expiry_check = Thread.start do
 			loop do
 				begin
