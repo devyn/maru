@@ -276,8 +276,12 @@ class Maru::Master < Sinatra::Base
 	end
 
 	get '/user/preferences' do
-		# Change your password, register workers, etc.
-		halt 501
+		must_be_logged_in!
+
+		@title       = "preferences"
+		@target_user = @user
+
+		erb :user_preferences
 	end
 
 	get '/user/:id/preferences' do

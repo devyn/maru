@@ -41,6 +41,28 @@ function hideError() {
 	this.addEventListener('oTransitionEnd',      function () { this.style.display = 'none'; }, true);
 }
 
+function flash(el, type) {
+	var animationend = function () {
+		el.style.animation = "";
+		el.style.mozAnimation = "";
+		el.style.webkitAnimation = "";
+		el.style.oAnimation = "";
+
+		el.removeEventListener('animationend', arguments.callee, true);
+		el.removeEventListener('webkitAnimationEnd', arguments.callee, true);
+		el.removeEventListener('oAnimationEnd', arguments.callee, true);
+	};
+
+	el.addEventListener('animationend', animationend, true);
+	el.addEventListener('webkitAnimationEnd', animationend, true);
+	el.addEventListener('oAnimationEnd', animationend, true);
+
+	el.style.animation = type + " 3s";
+	el.style.mozAnimation = type + " 3s";
+	el.style.webkitAnimation = type + " 3s";
+	el.style.oAnimation = type + " 3s";
+}
+
 window.addEventListener('load', function () {
 	setGroupOnclicks();
 
