@@ -146,7 +146,7 @@ function addWorker(formEl) {
 	req.send(new FormData(formEl));
 }
 
-function regenerateKeyForWorker(worker, workerEl, flashTarget) {
+function regenerateKeyForWorker(worker, flashTarget) {
 	var req      = new XMLHttpRequest()
 	  , workerEl = document.getElementById("worker-" + worker)
 	  ;
