@@ -37,7 +37,7 @@ function setGroupOnclicks() {
 var sGroups;
 
 function subscribeGroups() {
-	sGroups = new WebSocket("/", "maru-groups");
+	sGroups = new WebSocket("ws://" + window.location.hostname + ":" + (window.location.port || window.location.protocol === "https:" ? 443 : 80) + "/", "maru-groups");
 
 	sGroups.onmessage = function (event) {
 		var message = JSON.parse(event.data);
