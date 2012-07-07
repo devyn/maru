@@ -115,8 +115,6 @@ class Maru::Master < Sinatra::Base
 
 	class PathIsOutside < Exception; end
 
-	use Rack::Session::Cookie, :secret => "maru", :expire_after => 2592000 # 1 month
-
 	enable :static
 
 	set    :root,          File.join( File.dirname( __FILE__ ), '..' )

@@ -1,4 +1,6 @@
 require File.join( File.dirname( __FILE__ ), "maru/master" )
 
+use Rack::Session::Cookie, :secret => "maru", :expire_after => 2592000 # 1 month
+
 #use Rack::CommonLogger
 run Maru::Master
