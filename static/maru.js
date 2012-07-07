@@ -10,20 +10,26 @@ function selectJob(el) {
 		el.className = 'group';
 		details.innerHTML = "";
 	} else {
-		var req = new XMLHttpRequest();
-		req.onreadystatechange = function() {
-			if (req.readyState === 4) {
-				if (req.status === 200) {
-					el.className = 'group selected';
-					details.innerHTML = req.response;
-				} else {
-					details.innerHTML = "";
-				}
-			}
-		};
-		req.open('GET', "/group/"+el.id.replace(/^group-/, '')+"/details");
-		req.send(null);
+		setDetails(el.id.replace(/^group-/, '')+"/details");
 	}
+}
+
+function setDetails(group) {
+	var req = new XMLHttpRequest();
+
+	req.onreadystatechange = function() {
+		if (req.readyState === 4) {
+			if (req.status === 200) {
+				el.className = 'group selected';
+				details.innerHTML = req.response;
+			} else {
+				details.innerHTML = "";
+			}
+		}
+	};
+
+	req.open('GET', "/group/"+group+"/details");
+	req.send(null);
 }
 
 function setGroupOnclicks() {
@@ -51,6 +57,10 @@ function subscribeGroups() {
 
 						completeEl.style.width = (message.complete/message.total*100).toString() + "%";
 						processingEl.style.width = (message.processing/message.total*100).toString() + "%";
+
+						if (groupEl.className.match(/\bselected\b/i)) {
+							setDetails(message.groupID);
+						}
 						break;
 				}
 
