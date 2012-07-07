@@ -53,6 +53,8 @@ function subscribeGroups() {
 						processingEl.style.width = (message.processing/message.total*100).toString() + "%";
 						break;
 				}
+
+				subscribeGroups();
 			} else {
 				setTimeout(subscribeGroups, 3000);
 			}
