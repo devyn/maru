@@ -115,6 +115,20 @@ class Maru::Master < Sinatra::Base
 
 	DataMapper.finalize
 
+	class LongPollSubscriber
+		attr_reader :user
+
+		def onclose(&blk)
+			@close = blk
+		end
+
+		def send(msg)
+			@out << msg
+			@out.close
+			@close.call if @close
+		end
+	end
+
 	class PathIsOutside < Exception; end
 
 	enable :static
@@ -225,38 +239,30 @@ class Maru::Master < Sinatra::Base
 	end
 
 	get '/' do
-		if request.websocket?
-			_user = @user
-
-			request.websocket do |socket|
-				class << socket
-					def user
-						_user
-					end
-				end
-
-				socket.onopen do
-					settings.group_subscribers << socket
-				end
-				socket.onmessage do
-					# maybe something in the future
-				end
-				socket.onclose do
-					settings.group_subscribers.delete socket
-				end
+		if logged_in?
+			if @user.is_admin
+				@groups = Group.all
+			else
+				@groups = @user.groups + Group.all(:public => true)
 			end
 		else
-			if logged_in?
-				if @user.is_admin
-					@groups = Group.all
-				else
-					@groups = @user.groups + Group.all(:public => true)
-				end
-			else
-				@groups = Group.all(:public => true)
+			@groups = Group.all(:public => true)
+		end
+
+		erb :index
+	end
+
+	get '/subscribe' do
+		content_type "application/json"
+
+		stream :keep_open do |out|
+			socket = LongPollSubscriber.new( @user, out )
+
+			socket.onclose do
+				settings.group_subscribers.delete socket
 			end
 
-			erb :index
+			settings.group_subscribers << socket
 		end
 	end
 
