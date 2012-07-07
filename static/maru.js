@@ -204,13 +204,96 @@ function logUserOut(user, flashTarget) {
 	req.send(null);
 }
 
+function createUser(formEl) {
+	var req = new XMLHttpRequest();
+
+	req.onreadystatechange = function () {
+		if (req.readyState == 4) {
+			if (req.status == 200) {
+				var res = JSON.parse(req.responseText)["user"];
+
+				var inputs = formEl.querySelectorAll("input:not([type='submit'])");
+				for (var i = 0; i < inputs.length; i++) inputs[i].value = "";
+
+				var user  = document.createElement("li")
+				  , email = document.createElement("div")
+				  , nav   = document.createElement("nav")
+				  , ul    = document.createElement("ul")
+				  , li1   = document.createElement("li")
+				  , li2   = document.createElement("li")
+				  , li3   = document.createElement("li")
+				  , a1    = document.createElement("a")
+				  , a2    = document.createElement("a")
+				  , a3    = document.createElement("a")
+				  ;
+
+				user.className = "user";
+				user.id = "user-" + res["id"];
+
+				email.className = "email";
+				email.appendChild(document.createTextNode(res["email"]));
+				user.appendChild(email);
+
+				a1.href = "/user/" + res["id"] + "/login";
+				a1.appendChild(document.createTextNode("log in"));
+				li1.appendChild(a1);
+				ul.appendChild(li1);
+
+				a2.href = "/user/" + res["id"] + "/preferences";
+				a2.appendChild(document.createTextNode("edit"));
+				li2.appendChild(a2);
+				ul.appendChild(li2);
+
+				a3.onclick = deleteUser.bind(null, res["id"], adminRemoveUser, a3);
+				a3.appendChild(document.createTextNode("delete"));
+				li3.appendChild(a3);
+				ul.appendChild(li3);
+
+				nav.appendChild(ul);
+				user.appendChild(nav);
+
+				document.getElementById("users").insertBefore(user, document.getElementById("users-add-item"));
+
+				flash(formEl.querySelector("input[type='submit']"), "flash-box-success");
+			} else {
+				flash(formEl.querySelector("input[type='submit']"), "flash-box-error");
+			}
+		}
+	};
+
+	req.open("POST", "/user/new");
+	req.send(new FormData(formEl));
+}
+
+function setPermission(user, permission, checkbox) {
+	var req = new XMLHttpRequest();
+
+	req.onreadystatechange = function () {
+		if (req.readyState == 4) {
+			if (req.status != 204) {
+				checkbox.checked = !checkbox.checked;
+				flash(checkbox, "flash-box-error");
+			}
+		}
+	};
+
+	req.open("PUT", "/user/" + user + "/permission/" + permission);
+	req.send(checkbox.checked ? "true" : "false");
+}
+
 function deleteUser(user, userIsMe, flashTarget) {
+	if (!confirm("Are you sure? This action is irreversable.")) return;
+
 	var req = new XMLHttpRequest();
 
 	req.onreadystatechange = function () {
 		if (req.readyState == 4) {
 			if (req.status == 204) {
-				window.location = userIsMe ? "/" : "/admin";
+				if (typeof userIsMe === "function") {
+					userIsMe(user, flashTarget);
+				} else {
+					window.location = userIsMe ? "/" : "/admin";
+				}
 			} else {
 				if (flashTarget) flash(flashTarget, "flash-text-error");
 			}
@@ -219,6 +302,11 @@ function deleteUser(user, userIsMe, flashTarget) {
 
 	req.open("POST", "/user/" + user + "/delete");
 	req.send(null);
+}
+
+function adminRemoveUser(user, flashTarget) {
+	var userEl = document.getElementById("user-" + user);
+	userEl.parentNode.removeChild(userEl);
 }
 
 window.addEventListener('load', function () {

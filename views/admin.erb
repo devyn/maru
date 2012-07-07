@@ -1,0 +1,32 @@
+<div id="admin" class="single-pane">
+	<div>
+		<h1>Users</h1>
+		<ul id="users">
+		<% @users.each do |user| %>
+			<% next if user == @user %>
+			<li class="user" id="user-<%== user.id %>">
+				<div class="email"><%== user.email %></div>
+				<div class="permissions">
+					<label><input type="checkbox" onchange="setPermission(<%== user.id %>, 'can_own_workers', this);" <%= "checked" if user.can_own_workers %>/> Can own workers</label>
+					<label><input type="checkbox" onchange="setPermission(<%== user.id %>, 'can_own_groups', this);" <%= "checked" if user.can_own_groups %>/> Can own groups</label>
+					<label><input type="checkbox" onchange="setPermission(<%== user.id %>, 'is_admin', this);" <%= "checked" if user.is_admin %>/> Is admin</label>
+				</div>
+				<nav>
+				<ul>
+					<li><a href="/user/<%== user.id %>/login">log in</a></li>
+					<li><a href="/user/<%== user.id %>/preferences">edit</a></li>
+					<li><a onclick="deleteUser(<%== user.id %>, adminRemoveUser, this);">delete</a></li>
+				</ul>
+				</nav>
+			</li>
+		<% end %>
+			<li id="users-add-item">
+				<form id="add-user" onsubmit="createUser(this); return false">
+					<label for="email"><span>Email:</span><input name="email"/></label>
+					<label for="password"><span>Password:</span><input name="password" type="password"/></label>
+					<input type="submit" value="Create user"/>
+				</form>
+			</li>
+		</ul>
+	</div>
+</div>

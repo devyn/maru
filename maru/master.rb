@@ -213,7 +213,7 @@ class Maru::Master < Sinatra::Base
 			if @user.is_admin
 				@groups = Group.all
 			else
-				@groups = user.groups + Group.all(:public => true)
+				@groups = @user.groups + Group.all(:public => true)
 			end
 		else
 			@groups = Group.all(:public => true)
@@ -253,8 +253,11 @@ class Maru::Master < Sinatra::Base
 	end
 
 	get '/admin' do
-		# The chair in the sky
-		halt 501
+		must_be_admin!
+
+		@users = User.all
+
+		erb :admin
 	end
 
 	post '/worker/new' do
@@ -322,8 +325,35 @@ class Maru::Master < Sinatra::Base
 	end
 
 	post '/user/new' do
-		# Create a user
-		halt 501
+		must_be_admin!
+
+		@new_user = User.create :email => params[:email], :password => params[:password]
+
+		content_type 'application/json'
+		if @new_user.valid?
+			%{{"user":#{@new_user.to_json( :only => [ :id, :email, :can_own_groups, :can_own_workers, :is_admin ] )}}}
+		else
+			# vuuuuub
+			halt 400, {:errors => @new_user.errors.full_messages}.to_json
+		end
+	end
+
+	put '/user/:id/permission/:field' do
+		must_be_admin!
+
+		halt 404 unless @target_user = User.get(params[:id])
+		halt 404 unless %w(can_own_groups can_own_workers is_admin).include? params[:field]
+
+		request.body.rewind
+
+		@target_user[params[:field]] = request.body.read.strip
+
+		content_type 'application/json'
+		if @target_user.save
+			halt 204
+		else
+			halt 400, {:errors => @target_user.errors.full_messages}.to_json
+		end
 	end
 
 	get '/user/preferences' do
@@ -335,9 +365,24 @@ class Maru::Master < Sinatra::Base
 		erb :user_preferences
 	end
 
+	get '/user/:id/login' do
+		must_be_admin!
+
+		if user = User.get(params[:id])
+			session[:user] = user.id
+			session[:authenticated_at] = Time.now
+			redirect to('/')
+		else
+			halt 404, "not found"
+		end
+	end
+
 	get '/user/:id/preferences' do
-		# Change others' passwords, manage their workers, etc.
-		halt 501
+		must_be_admin!
+
+		halt 404 unless @target_user = User.get(params[:id])
+
+		erb :user_preferences
 	end
 
 	post '/user/:id/password' do

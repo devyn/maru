@@ -443,7 +443,7 @@ a:hover {
 	margin-bottom: 20px;
 }
 
-.single-pane input:not([type="submit"]) {
+.single-pane input:not([type="submit"]):not([type="checkbox"]) {
 	width: 300px;
 	padding: 4px;
 	font-size: 12px;
@@ -468,7 +468,7 @@ a:hover {
 	color: #606060;
 }
 
-#user-preferences #workers li {
+#user-preferences #workers li, #admin #users li {
 	margin-top: 1em;
 }
 
@@ -499,4 +499,27 @@ a:hover {
 	border-radius: 5px;
 	padding: 0.5em;
 	font-size: 12px;
+}
+
+#admin #users .permissions label {
+	margin: 10px;
+}
+
+#admin #add-user label {
+	margin-bottom: 5px;
+}
+
+#admin #add-user span {
+	display: inline-block;
+	width: 6em;
+}
+
+#admin #add-user input:not([type="submit"]) {
+	width: 200px;
+	padding: 0.25em;
+}
+
+#admin #add-user input[type="submit"] {
+	margin-top: 0.5em;
+	margin-left: 6em;
 }
