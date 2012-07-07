@@ -42,8 +42,12 @@ function subscribeGroups() {
 			if (req.status == 200) {
 				var message = JSON.parse(req.responseText);
 
+				console.log(message);
+
 				switch (message.type) {
 					case "groupStatus":
+						console.log("groupStatus");
+
 						var groupEl      = document.getElementById("group-" + message.groupID)
 							, completeEl   = el.querySelector(".progress .complete")
 							, processingEl = el.querySelector(".progress .processing")
@@ -54,6 +58,7 @@ function subscribeGroups() {
 						break;
 				}
 
+				console.log("subscribing");
 				subscribeGroups();
 			} else {
 				setTimeout(subscribeGroups, 3000);
