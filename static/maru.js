@@ -10,7 +10,7 @@ function selectJob(el) {
 		el.className = 'group';
 		details.innerHTML = "";
 	} else {
-		setDetails(el.id.replace(/^group-/, '')+"/details");
+		setDetails(el.id.replace(/^group-/, ''));
 	}
 }
 
