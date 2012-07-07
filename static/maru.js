@@ -62,7 +62,7 @@ function subscribeGroups() {
 						completeEl.style.width = (message.complete/message.total*100).toString() + "%";
 						processingEl.style.width = (message.processing/message.total*100).toString() + "%";
 
-						if (groupEl.className.match(/\bselected\b/i)) {
+						if (groupEl.className.match(/selected/i)) {
 							setDetails(message.groupID);
 						}
 						break;
