@@ -33,9 +33,6 @@ masters:
   key: oe2mzx5zngtoxe0t8we4kwdf
 - url: http://compute.example.com/
   key: jxfzl7n9wex85lcerxcpll8q
-kinds:
-- blender_animation
-- prime_number
 plugins:
 - maru/plugins/blender_animation
 - maru/plugins/prime_number
