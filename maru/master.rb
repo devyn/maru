@@ -82,7 +82,7 @@ class Maru::Master < Sinatra::Base
 		include DataMapper::Resource
 
 		has n, :workers
-		has n, :groups
+		has n, :groups,  :constraint => :destroy
 
 		property :id,            Serial
 		property :email,         String, :required => true, :length => 255, :unique => true
@@ -313,11 +313,7 @@ class Maru::Master < Sinatra::Base
 			halt 204 # no content
 		else
 			# forfeit all jobs the worker is currently working on
-			@worker.jobs( :completed_at => nil ).each do |job|
-				job.worker = nil
-				job.assigned_at = nil
-				job.save
-			end
+			@worker.jobs( :completed_at => nil ).update :worker => nil, :assigned_at => nil
 
 			if @worker.update :user => nil
 				halt 204
@@ -371,14 +367,13 @@ class Maru::Master < Sinatra::Base
 		must_be_logged_in!
 
 		halt 404 unless @target_user = User.get(params[:id])
+		halt 403 unless @user == @target_user or @user.is_admin
 
-		if @user == @target_user or @user.is_admin
-			if @target_user.update :invalid_before => Time.now
-				session[:authenticated_at] = Time.now if @user == @target_user
-				halt 204 # no content
-			else
-				halt 500
-			end
+		if @target_user.update :invalid_before => Time.now
+			session[:authenticated_at] = Time.now if @user == @target_user
+			halt 204 # no content
+		else
+			halt 500
 		end
 	end
 
@@ -386,8 +381,26 @@ class Maru::Master < Sinatra::Base
 		must_be_logged_in!
 
 		halt 404 unless @target_user = User.get(params[:id])
+		halt 403 unless @target_user == @user or @user.is_admin
 
-		# TODO
+		User.transaction do
+			@target_user.workers.each do |worker|
+				if worker.destroy == false
+					if worker.update :user => nil
+						worker.jobs( :completed_at => nil ).update :worker => nil, :assigned_at => nil
+					else
+						raise
+					end
+				end
+			end
+
+			# No idea why I have to do this. Apparently destroying the workers makes the user object immutable.
+			User.get(@target_user.id).destroy or raise
+		end
+
+		session[:user] = nil if @target_user == @user
+
+		halt 204
 	end
 
 	get '/group/new' do

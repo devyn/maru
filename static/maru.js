@@ -187,6 +187,40 @@ function deleteWorker(worker, flashTarget) {
 	req.send(null);
 }
 
+function logUserOut(user, flashTarget) {
+	var req = new XMLHttpRequest();
+
+	req.onreadystatechange = function () {
+		if (req.readyState == 4) {
+			if (req.status == 204) {
+				if (flashTarget) flash(flashTarget, "flash-text-success");
+			} else {
+				if (flashTarget) flash(flashTarget, "flash-text-error");
+			}
+		}
+	};
+
+	req.open("POST", "/user/" + user + "/logout");
+	req.send(null);
+}
+
+function deleteUser(user, userIsMe, flashTarget) {
+	var req = new XMLHttpRequest();
+
+	req.onreadystatechange = function () {
+		if (req.readyState == 4) {
+			if (req.status == 204) {
+				window.location = userIsMe ? "/" : "/admin";
+			} else {
+				if (flashTarget) flash(flashTarget, "flash-text-error");
+			}
+		}
+	};
+
+	req.open("POST", "/user/" + user + "/delete");
+	req.send(null);
+}
+
 window.addEventListener('load', function () {
 	setGroupOnclicks();
 

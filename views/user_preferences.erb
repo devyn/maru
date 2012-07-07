@@ -48,11 +48,12 @@
 		<nav class="vertical">
 		<ul>
 		<% if @user == @target_user %>
-			<li>log out of all sessions except this one</li>
+			<li><a onclick="logUserOut(<%== @user.id %>, this);">log out of all sessions except this one</a></li>
+			<li><a onclick="deleteUser(<%== @user.id %>, true, this);">delete account</a></li>
 		<% else %>
-			<li>force user to log out</li>
+			<li><a onclick="logUserOut(<%== @target_user.id %>, this)">force user to log out</a></li>
+			<li><a onclick="deleteUser(<%== @target_user.id %>, false, this);">delete account</a></li>
 		<% end %>
-			<li>delete account</li>
 		</ul>
 		</nav>
 	</div>
