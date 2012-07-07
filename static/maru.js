@@ -75,6 +75,8 @@ function subscribeGroups() {
 		}
 	};
 
+	req.timeout = 86400000;
+
 	req.open("GET", "/subscribe");
 	req.send(null);
 }
