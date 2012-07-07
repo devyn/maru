@@ -48,6 +48,8 @@ function subscribeGroups() {
 	req.onreadystatechange = function () {
 		if (req.readyState == 4) {
 			if (req.status == 200) {
+				if (!req.responseText) return subscribeGroups();
+
 				var message = JSON.parse(req.responseText);
 
 				switch (message.type) {
