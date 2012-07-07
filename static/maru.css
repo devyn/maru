@@ -311,6 +311,11 @@ a:hover {
 
 .group .progress * {
 	display: inline-block;
+
+	-webkit-transition: width ease-in 0.5s;
+	-moz-transition: width ease-in 0.5s;
+	-ms-transition: width ease-in 0.5s;
+	-o-transition: width ease-in 0.5s;
 }
 
 .group .progress .complete {

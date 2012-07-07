@@ -1,4 +1,5 @@
 require 'sinatra/base'
+require 'sinatra-websocket'
 require 'json'
 require 'data_mapper'
 require 'fileutils'
@@ -125,6 +126,8 @@ class Maru::Master < Sinatra::Base
 
 	set    :erubis,        :escape_html => true
 
+	set    :group_subscribers, []
+
 	configure do
 		DataMapper.setup( :default, ENV["DATABASE_URL"] || "sqlite://#{Dir.pwd}/maru.db" )
 		DataMapper.auto_upgrade!
@@ -134,7 +137,7 @@ class Maru::Master < Sinatra::Base
 		end
 
 		EM.next_tick do
-			@@expiry_check = EM.add_periodic_timer(60) do
+			set :expiry_check, EM.add_periodic_timer(60) do
 				begin
 					Job.all( :worker.not => nil, :completed_at => nil ).each do |job|
 						if Time.now - job.assigned_at.to_time > job.expiry
@@ -207,20 +210,54 @@ class Maru::Master < Sinatra::Base
 			must_be_logged_in!
 			redirect_to('/') unless @user.is_admin
 		end
+
+		def update_group_status(group)
+			complete   = group.all( :completed_at.not => nil ).length
+			processing = group.all( :worker.not => nil, :completed_at => nil ).length
+			total      = group.all.length
+
+			settings.group_subscribers.each do |socket|
+				next if !group.public and not (socket.user == group.user or socket.user.is_admin)
+
+				socket.send( {type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total }.to_json )
+			end
+		end
 	end
 
 	get '/' do
-		if logged_in?
-			if @user.is_admin
-				@groups = Group.all
-			else
-				@groups = @user.groups + Group.all(:public => true)
+		if request.websocket?
+			_user = @user
+
+			request.websocket do |socket|
+				class << socket
+					def user
+						_user
+					end
+				end
+
+				socket.onopen do
+					settings.group_subscribers << socket
+				end
+				socket.onmessage do
+					# maybe something in the future
+				end
+				socket.onclose do
+					settings.group_subscribers.delete socket
+				end
 			end
 		else
-			@groups = Group.all(:public => true)
-		end
+			if logged_in?
+				if @user.is_admin
+					@groups = Group.all
+				else
+					@groups = @user.groups + Group.all(:public => true)
+				end
+			else
+				@groups = Group.all(:public => true)
+			end
 
-		erb :index
+			erb :index
+		end
 	end
 
 	get '/user/login' do
@@ -560,6 +597,8 @@ class Maru::Master < Sinatra::Base
 
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;33massigned to \e[0m#{worker.to_color}"
 
+			EM.next_tick { update_group_status job.group }
+
 			%{{"job":#{job.to_json( :exclude => [:worker_id, :user_id], :relationships => {:group => {:exclude => [:output_dir], :relationships => {:user => {:only => [:email]}}}} )}}}
 		end
 	end
@@ -592,6 +631,8 @@ class Maru::Master < Sinatra::Base
 
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;32mcompleted by \e[0m#{worker.to_color}"
 
+			EM.next_tick { update_group_status job.group }
+
 			JSON.dump( :success => true )
 		end
 	end
@@ -609,6 +650,8 @@ class Maru::Master < Sinatra::Base
 			job.update :worker => nil, :assigned_at => nil
 
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;31mforfeited by \e[0m#{worker.to_color}"
+
+			EM.next_tick { update_group_status job.group }
 
 			JSON.dump( :success => true )
 		end

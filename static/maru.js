@@ -34,6 +34,33 @@ function setGroupOnclicks() {
 	}
 }
 
+var sGroups;
+
+function subscribeGroups() {
+	sGroups = new WebSocket("/", "maru-groups");
+
+	sGroups.onmessage = function (event) {
+		var message = JSON.parse(event.data);
+
+		switch (message.type) {
+			case "groupStatus":
+				var groupEl      = document.getElementById("group-" + message.groupID)
+				  , completeEl   = el.querySelector(".progress .complete")
+				  , processingEl = el.querySelector(".progress .processing")
+				  ;
+
+				completeEl.style.width = (message.complete/message.total*100).toString() + "%";
+				processingEl.style.width = (message.processing/message.total*100).toString() + "%";
+				break;
+		}
+	};
+	sGroups.onerror = function () {
+		setTimeout(subscribeGroups, 3000);
+	};
+
+	return sGroups;
+}
+
 function hideError() {
 	this.style.opacity = 0;
 	this.addEventListener('transitionend',       function () { this.style.display = 'none'; }, true);
