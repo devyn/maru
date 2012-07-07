@@ -50,7 +50,7 @@ function subscribeGroups() {
 			if (req.status == 200) {
 				if (!req.responseText) return subscribeGroups();
 
-				var message = JSON.parse(req.responseText);
+				var message = req.response;
 
 				switch (message.type) {
 					case "groupStatus":
