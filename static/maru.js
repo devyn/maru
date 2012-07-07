@@ -52,20 +52,18 @@ function subscribeGroups() {
 
 				var message = req.response;
 
-				switch (message.type) {
-					case "groupStatus":
-						var groupEl      = document.getElementById("group-" + message.groupID)
-							, completeEl   = groupEl.querySelector(".progress .complete")
-							, processingEl = groupEl.querySelector(".progress .processing")
-							;
+				if (message.type === "groupStatus") {
+					var groupEl      = document.getElementById("group-" + message.groupID)
+						, completeEl   = groupEl.querySelector(".progress .complete")
+						, processingEl = groupEl.querySelector(".progress .processing")
+						;
 
-						completeEl.style.width = (message.complete/message.total*100).toString() + "%";
-						processingEl.style.width = (message.processing/message.total*100).toString() + "%";
+					completeEl.style.width = (message.complete/message.total*100).toString() + "%";
+					processingEl.style.width = (message.processing/message.total*100).toString() + "%";
 
-						if (groupEl.className.match(/selected/i)) {
-							setDetails(message.groupID);
-						}
-						break;
+					if (groupEl.className.match(/\bselected\b/i)) {
+						setDetails(message.groupID);
+					}
 				}
 
 				subscribeGroups();
