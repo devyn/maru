@@ -10,17 +10,19 @@ function selectJob(el) {
 		el.className = 'group';
 		details.innerHTML = "";
 	} else {
-		setDetails(el.id.replace(/^group-/, ''));
+		setDetails(el.id.replace(/^group-/, ''), function () {
+			el.className = 'group selected';
+		});
 	}
 }
 
-function setDetails(group) {
+function setDetails(group, onsuccess) {
 	var req = new XMLHttpRequest();
 
 	req.onreadystatechange = function() {
 		if (req.readyState === 4) {
 			if (req.status === 200) {
-				el.className = 'group selected';
+				if (typeof onsuccess === 'function') onsuccess();
 				details.innerHTML = req.response;
 			} else {
 				details.innerHTML = "";
