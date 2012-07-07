@@ -121,6 +121,10 @@ class Maru::Master < Sinatra::Base
 		def initialize(user, out)
 			@user = user
 			@out  = out
+
+			@out.errback do
+				@close.call if @close
+			end
 		end
 
 		def onclose(&blk)
