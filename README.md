@@ -29,12 +29,14 @@ group_expiry: 86400              # Default: 7200 seconds (2 hours)
 keep_temp: true                  # Default: false
 temp_dir: /home/compute/worker1/ # Default: /tmp/maru.<PID>
 masters:
-- http://localhost:3202/
-- http://compute.example.com/
+- url: http://localhost:3202/
+  key: oe2mzx5zngtoxe0t8we4kwdf
+- url: http://compute.example.com/
+  key: jxfzl7n9wex85lcerxcpll8q
 kinds:
 - blender_animation
 - prime_number
 plugins:
-- maru/worker/plugins/blender_animation
-- maru/worker/plugins/prime_number
+- maru/plugins/blender_animation
+- maru/plugins/prime_number
 ```
