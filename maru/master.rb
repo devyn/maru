@@ -118,6 +118,11 @@ class Maru::Master < Sinatra::Base
 	class LongPollSubscriber
 		attr_reader :user
 
+		def initialize(user, out)
+			@user = user
+			@out  = out
+		end
+
 		def onclose(&blk)
 			@close = blk
 		end
