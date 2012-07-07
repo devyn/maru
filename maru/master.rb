@@ -5,6 +5,7 @@ require 'fileutils'
 require 'openssl'
 require 'erubis'
 require 'rdiscount'
+require 'eventmachine'
 
 require_relative 'plugin'
 
@@ -132,18 +133,16 @@ class Maru::Master < Sinatra::Base
 			User.create :email => "maru@example.com", :password => "maru", :is_admin => true
 		end
 
-		@@expiry_check = Thread.start do
-			loop do
-				begin
-					Job.all( :worker.not => nil, :completed_at => nil ).each do |job|
-						if Time.now - job.assigned_at.to_time > job.expiry
-							Kernel.warn "\e[1m>\e[0m Reaping #{job.to_color} (expired)"
-							job.update :worker => nil
-						end
+		@@expiry_check = EM.add_periodic_timer(60) do
+			begin
+				Job.all( :worker.not => nil, :completed_at => nil ).each do |job|
+					if Time.now - job.assigned_at.to_time > job.expiry
+						Kernel.warn "\e[1m>\e[0m Reaping #{job.to_color} (expired)"
+						job.update :worker => nil
 					end
-					sleep 60
-				rescue Exception
 				end
+			rescue
+				next
 			end
 		end
 	end
