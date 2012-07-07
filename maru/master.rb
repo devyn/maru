@@ -212,9 +212,9 @@ class Maru::Master < Sinatra::Base
 		end
 
 		def update_group_status(group)
-			complete   = group.all( :completed_at.not => nil ).length
-			processing = group.all( :worker.not => nil, :completed_at => nil ).length
-			total      = group.all.length
+			complete   = group.jobs( :completed_at.not => nil ).length
+			processing = group.jobs( :worker.not => nil, :completed_at => nil ).length
+			total      = group.jobs.length
 
 			settings.group_subscribers.each do |socket|
 				next if !group.public and not (socket.user == group.user or socket.user.is_admin)
