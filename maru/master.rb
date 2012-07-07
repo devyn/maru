@@ -132,6 +132,10 @@ class Maru::Master < Sinatra::Base
 			@out.close
 			@close.call if @close
 		end
+
+		def send_keepalive
+			@out << "\0"
+		end
 	end
 
 	class PathIsOutside < Exception; end
@@ -166,6 +170,12 @@ class Maru::Master < Sinatra::Base
 					end
 				rescue
 					next
+				end
+			end
+
+			@@keep_alive = EM.add_periodic_timer(25) do
+				settings.group_subscribers.each do |s|
+					s.send_keepalive rescue next
 				end
 			end
 		end
