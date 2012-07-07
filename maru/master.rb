@@ -137,7 +137,7 @@ class Maru::Master < Sinatra::Base
 		end
 
 		EM.next_tick do
-			set :expiry_check, EM.add_periodic_timer(60) do
+			@@expiry_check = EM.add_periodic_timer(60) do
 				begin
 					Job.all( :worker.not => nil, :completed_at => nil ).each do |job|
 						if Time.now - job.assigned_at.to_time > job.expiry
