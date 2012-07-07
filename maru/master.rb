@@ -61,7 +61,7 @@ class Maru::Master < Sinatra::Base
 	class Worker
 		include DataMapper::Resource
 
-		belongs_to :user
+		belongs_to :user, :required => false
 
 		has n, :jobs
 
@@ -69,8 +69,6 @@ class Maru::Master < Sinatra::Base
 		property :name,           String, :required => true, :length => 128, :unique  => true # The name of the worker.
 		property :authenticator,  String, :required => true, :length => 24,  :default => proc { rand(36**24).to_s(36) }
 		                                  # The key, but we can't call it that.
-
-		property :deleted,        Boolean, :required => true, :default => false # We can't actually destroy workers that have done work.
 
 		# Session revocation
 		property :invalid_before, DateTime, :required => true, :default => proc { Time.now }
@@ -158,7 +156,7 @@ class Maru::Master < Sinatra::Base
 		end
 
 		if session[:worker] and session[:worker_authenticated_at]
-			@worker = Worker.first( :id => session[:worker], :invalid_before.lt => session[:worker_authenticated_at], :deleted => false )
+			@worker = Worker.first( :id => session[:worker], :invalid_before.lt => session[:worker_authenticated_at], :user.not => nil )
 		end
 	end
 
@@ -270,7 +268,17 @@ class Maru::Master < Sinatra::Base
 		if @worker.save
 			{:worker => @worker}.to_json
 		else
-			halt 400, {:errors => @worker.errors.full_messages}.to_json
+			if @worker = Worker.get( :name => params[:name], :user => nil )
+				@worker.user = @user
+
+				if @worker.save
+					{:worker => @worker}.to_json
+				else
+					halt 400, {:errors => @worker.errors.full_messages}.to_json
+				end
+			else
+				halt 400, {:errors => @worker.errors.full_messages}.to_json
+			end
 		end
 	end
 
@@ -311,7 +319,7 @@ class Maru::Master < Sinatra::Base
 				job.save
 			end
 
-			if @worker.update :deleted => true
+			if @worker.update :user => nil
 				halt 204
 			else
 				halt 500
@@ -360,13 +368,26 @@ class Maru::Master < Sinatra::Base
 	end
 
 	post '/user/:id/logout' do
-		# Logs a user out of all sessions by changing valid_before.
-		halt 501
+		must_be_logged_in!
+
+		halt 404 unless @target_user = User.get(params[:id])
+
+		if @user == @target_user or @user.is_admin
+			if @target_user.update :invalid_before => Time.now
+				session[:authenticated_at] = Time.now if @user == @target_user
+				halt 204 # no content
+			else
+				halt 500
+			end
+		end
 	end
 
 	post '/user/:id/delete' do
-		# Deletes a user account.
-		halt 501
+		must_be_logged_in!
+
+		halt 404 unless @target_user = User.get(params[:id])
+
+		# TODO
 	end
 
 	get '/group/new' do
@@ -446,7 +467,7 @@ class Maru::Master < Sinatra::Base
 		content_type "text/plain"
 
 		if session[:challenge]
-			target = Worker.first :name => params[:name], :deleted => false
+			target = Worker.first :name => params[:name], :user.not => nil
 
 			if target and params[:response] == OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, target.authenticator, session[:challenge])
 				session[:worker]                  = target.id

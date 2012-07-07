@@ -23,7 +23,7 @@
 	<div>
 		<h1>Workers</h1>
 		<ul id="workers">
-		<% @target_user.workers( :deleted => false ).each do |worker| %>
+		<% @target_user.workers.each do |worker| %>
 			<li id="worker-<%== worker.id %>">
 				<div class="name"><%== worker.name %></div>
 				<div class="key"><%== worker.authenticator %></div>
