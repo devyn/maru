@@ -99,10 +99,36 @@ function processSubMessage(message) {
 		  ;
 
 		completeEl.style.width = (message.complete/message.total*100).toString() + "%";
-		processingEl.style.width = (message.processing/message.total*100).toString() + "%";
+		processingEl.style.width = (message.processing.length/message.total*100).toString() + "%";
 
 		if (groupEl.className.match(/\bselected\b/i)) {
-			setDetails(message.groupID);
+			var details     = document.querySelector("#details")
+			  , nComplete   = details.querySelector("#status .complete")
+			  , nProcessing = details.querySelector("#status .processing")
+			  , nRemaining  = details.querySelector("#status .remaining")
+			  , lProcessing = details.querySelector("#processing-jobs tbody")
+			  ;
+
+			nComplete.textContent   = message.complete;
+			nProcessing.textContent = message.processing.length;
+			nRemaining.textContent  = message.total - message.complete - message.processing.length;
+
+			while (lProcessing.hasChildNodes()) lProcessing.removeChild(lProcessing.lastChild);
+
+			for (var i = 0; i < message.processing.length; i++) {
+				var tr       = document.createElement("tr")
+				  , tdName   = document.createElement("td")
+				  , tdWorker = document.createElement("td")
+				  ;
+
+				tdName.appendChild(document.createTextNode(message.processing[i].name));
+				tr.appendChild(tdName);
+
+				tdWorker.appendChild(document.createTextNode(message.processing[i].worker));
+				tr.appendChild(tdWorker);
+
+				lProcessing.appendChild(tr);
+			}
 		}
 	}
 }

@@ -261,7 +261,7 @@ class Maru::Master < Sinatra::Base
 
 		def update_group_status(group)
 			complete   = group.jobs( :completed_at.not => nil ).length
-			processing = group.jobs( :worker.not => nil, :completed_at => nil ).length
+			processing = group.jobs( :worker.not => nil, :completed_at => nil ).map { |job| {:name => job.name, :worker => job.worker.name} }
 			total      = group.jobs.length
 
 			settings.group_subscribers.each do |socket|
