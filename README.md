@@ -24,6 +24,7 @@ They share a many-to-many relationship. That is, masters may give jobs to any nu
 
 ```yaml
 ---
+name: Compute-Worker1            # Required. Must be unique on all masters.
 wait_time: 60                    # Default: 30 seconds
 group_expiry: 86400              # Default: 7200 seconds (2 hours)
 keep_temp: true                  # Default: false
