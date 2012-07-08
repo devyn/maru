@@ -1,6 +1,5 @@
 require 'sinatra/base'
 require 'sinatra/streaming'
-require 'sinatra-websocket'
 require 'json'
 require 'data_mapper'
 require 'fileutils'
