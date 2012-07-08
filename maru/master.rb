@@ -1,5 +1,4 @@
 require 'sinatra/base'
-require 'sinatra/streaming'
 require 'json'
 require 'data_mapper'
 require 'fileutils'
@@ -140,12 +139,10 @@ class Maru::Master < Sinatra::Base
 	class EventStreamSubscriber < HTTPSubscriber
 		def send(msg)
 			@out << "data: " + msg + "\n\n"
-			@out.flush
 		end
 
 		def send_keepalive
 			@out << ":\n"
-			@out.flush
 		end
 	end
 
@@ -157,13 +154,10 @@ class Maru::Master < Sinatra::Base
 
 		def send_keepalive
 			@out << "\0"
-			@out.flush
 		end
 	end
 
 	class PathIsOutside < Exception; end
-
-	helpers Sinatra::Streaming
 
 	enable :static
 
@@ -297,8 +291,6 @@ class Maru::Master < Sinatra::Base
 
 		stream :keep_open do |out|
 			socket = EventStreamSubscriber.new( @user, out )
-
-			socket.send_keepalive
 
 			socket.onclose do
 				settings.group_subscribers.delete socket
