@@ -194,8 +194,8 @@ module Maru
 
 				master.complete_job job["id"], :files => files
 
-				files.each do |fn,f|
-					File.unlink fn
+				files.each do |f|
+					File.unlink f["name"]
 				end
 
 				puts "\e[1m> #{format_job job, master} \e[1;32mdone\e[0m"
