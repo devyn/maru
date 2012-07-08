@@ -293,6 +293,8 @@ class Maru::Master < Sinatra::Base
 		stream :keep_open do |out|
 			socket = EventStreamSubscriber.new( @user, out )
 
+			socket.send_keepalive
+
 			socket.onclose do
 				settings.group_subscribers.delete socket
 			end
