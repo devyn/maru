@@ -48,7 +48,7 @@ function subscribeGroups() {
 	req.onreadystatechange = function () {
 		if (req.readyState == 4) {
 			if (req.status == 200) {
-				var rs = req.responseText.replace('\0', '');
+				var rs = req.responseText.replace(/\0/g, '');
 
 				if (!rs) return subscribeGroups();
 
