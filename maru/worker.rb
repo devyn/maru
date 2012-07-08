@@ -188,7 +188,7 @@ module Maru
 			plugin = Maru::Plugin[job["group"]["kind"]]
 
 			if plugin.respond_to? :process_job
-				files = Hash[plugin.process_job( job ).map { |f| {"name" => f, "data" => File.new( f )} }]
+				files = plugin.process_job( job ).map { |f| {"name" => f, "data" => File.new( f )} }
 
 				puts "\e[1m  > \e[0;34mUploading results...\e[0m"
 
