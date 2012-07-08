@@ -1,4 +1,5 @@
 require 'sinatra/base'
+require 'sinatra/streaming'
 require 'sinatra-websocket'
 require 'json'
 require 'data_mapper'
@@ -140,10 +141,12 @@ class Maru::Master < Sinatra::Base
 	class EventStreamSubscriber < HTTPSubscriber
 		def send(msg)
 			@out << "data: " + msg + "\n\n"
+			@out.flush
 		end
 
 		def send_keepalive
 			@out << ":\n"
+			@out.flush
 		end
 	end
 
@@ -155,10 +158,13 @@ class Maru::Master < Sinatra::Base
 
 		def send_keepalive
 			@out << "\0"
+			@out.flush
 		end
 	end
 
 	class PathIsOutside < Exception; end
+
+	helpers Sinatra::Streaming
 
 	enable :static
 
