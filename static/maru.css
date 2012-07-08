@@ -68,6 +68,10 @@ body {
 	color: #d0d0d0;
 }
 
+input[type="submit"], button {
+	cursor: pointer;
+}
+
 #header {
 	position: absolute;
 	top: 0;
