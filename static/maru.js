@@ -52,14 +52,14 @@ function subscribeGroups() {
 
 				var message = req.response;
 
-				if (message.type === "groupStatus") {
-					var groupEl      = document.getElementById("group-" + message.groupID)
+				if (message["type"] === "groupStatus") {
+					var groupEl      = document.getElementById("group-" + message["groupID"])
 						, completeEl   = groupEl.querySelector(".progress .complete")
 						, processingEl = groupEl.querySelector(".progress .processing")
 						;
 
-					completeEl.style.width = (message.complete/message.total*100).toString() + "%";
-					processingEl.style.width = (message.processing/message.total*100).toString() + "%";
+					completeEl.style.width = (message["complete"]/message["total"]*100).toString() + "%";
+					processingEl.style.width = (message["processing"]/message["total"]*100).toString() + "%";
 
 					if (groupEl.className.match(/\bselected\b/i)) {
 						setDetails(message.groupID);
