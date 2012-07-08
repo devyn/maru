@@ -48,27 +48,29 @@ function subscribeGroups() {
 	req.onreadystatechange = function () {
 		if (req.readyState == 4) {
 			if (req.status == 200) {
-				var rs = req.responseText.replace(/\0/g, '');
+				try {
+					var rs = req.responseText.replace(/\0/g, '');
 
-				if (!rs) return subscribeGroups();
+					if (!rs) return subscribeGroups();
 
-				var message = JSON.parse(rs);
+					var message = JSON.parse(rs);
 
-				if (message.type === "groupStatus") {
-					var groupEl      = document.getElementById("group-" + message.groupID)
-						, completeEl   = groupEl.querySelector(".progress .complete")
-						, processingEl = groupEl.querySelector(".progress .processing")
-						;
+					if (message.type === "groupStatus") {
+						var groupEl      = document.getElementById("group-" + message.groupID)
+							, completeEl   = groupEl.querySelector(".progress .complete")
+							, processingEl = groupEl.querySelector(".progress .processing")
+							;
 
-					completeEl.style.width = (message.complete/message.total*100).toString() + "%";
-					processingEl.style.width = (message.processing/message.total*100).toString() + "%";
+						completeEl.style.width = (message.complete/message.total*100).toString() + "%";
+						processingEl.style.width = (message.processing/message.total*100).toString() + "%";
 
-					if (groupEl.className.match(/\bselected\b/i)) {
-						setDetails(message.groupID);
+						if (groupEl.className.match(/\bselected\b/i)) {
+							setDetails(message.groupID);
+						}
 					}
+				} finally {
+					subscribeGroups();
 				}
-
-				subscribeGroups();
 			} else {
 				setTimeout(subscribeGroups, 3000);
 			}
