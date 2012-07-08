@@ -667,6 +667,8 @@ class Maru::Master < Sinatra::Base
 		if job.nil?
 			halt 404, JSON.dump( :error => "job not found" )
 		else
+			params[:files] = [params[:files]] if params[:files].is_a? Hash
+
 			params[:files].each do |file|
 				begin
 					path = join_relative job.group.output_dir, file["name"]
