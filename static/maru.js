@@ -43,6 +43,28 @@ function setGroupOnclicks() {
 }
 
 function subscribeGroups() {
+	if (typeof EventSource !== "undefined") {
+		subscribeGroupsViaEventStream();
+	} else if (typeof XMLHttpRequest !== "undefined") {
+		longPollGroups();
+	}
+}
+
+function subscribeGroupsViaEventStream() {
+	var source = new EventSource("/subscribe.event-stream");
+
+	source.onmessage = function (event) {
+		try {
+			processSubMessage(JSON.parse(event.data));
+		} catch (e) {
+			console.log(e);
+		}
+	};
+
+	return source;
+}
+
+function longPollGroups() {
 	var req = new XMLHttpRequest();
 
 	req.onreadystatechange = function () {
@@ -55,30 +77,34 @@ function subscribeGroups() {
 
 					var message = JSON.parse(rs);
 
-					if (message.type === "groupStatus") {
-						var groupEl      = document.getElementById("group-" + message.groupID)
-							, completeEl   = groupEl.querySelector(".progress .complete")
-							, processingEl = groupEl.querySelector(".progress .processing")
-							;
-
-						completeEl.style.width = (message.complete/message.total*100).toString() + "%";
-						processingEl.style.width = (message.processing/message.total*100).toString() + "%";
-
-						if (groupEl.className.match(/\bselected\b/i)) {
-							setDetails(message.groupID);
-						}
-					}
+					processSubMessage(message);
 				} finally {
-					subscribeGroups();
+					longPollGroups();
 				}
 			} else {
-				setTimeout(subscribeGroups, 3000);
+				setTimeout(longPollGroups, 3000);
 			}
 		}
 	};
 
-	req.open("GET", "/subscribe");
+	req.open("GET", "/subscribe.poll");
 	req.send(null);
+}
+
+function processSubMessage(message) {
+	if (message.type === "groupStatus") {
+		var groupEl      = document.getElementById("group-" + message.groupID)
+		  , completeEl   = groupEl.querySelector(".progress .complete")
+		  , processingEl = groupEl.querySelector(".progress .processing")
+		  ;
+
+		completeEl.style.width = (message.complete/message.total*100).toString() + "%";
+		processingEl.style.width = (message.processing/message.total*100).toString() + "%";
+
+		if (groupEl.className.match(/\bselected\b/i)) {
+			setDetails(message.groupID);
+		}
+	}
 }
 
 function hideError() {
