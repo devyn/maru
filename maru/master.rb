@@ -115,7 +115,7 @@ class Maru::Master < Sinatra::Base
 
 	DataMapper.finalize
 
-	class LongPollSubscriber
+	class HTTPSubscriber
 		attr_reader :user
 
 		def initialize(user, out)
@@ -123,7 +123,7 @@ class Maru::Master < Sinatra::Base
 			@out  = out
 
 			@out.errback do
-				@close.call if @close
+				close
 			end
 		end
 
@@ -131,10 +131,26 @@ class Maru::Master < Sinatra::Base
 			@close = blk
 		end
 
+		def close
+			@out.close rescue nil
+			@close.call if @close
+		end
+	end
+
+	class EventStreamSubscriber < HTTPSubscriber
+		def send(msg)
+			@out << "data: " + msg + "\n\n"
+		end
+
+		def send_keepalive
+			@out << ":\n"
+		end
+	end
+
+	class LongPollSubscriber < HTTPSubscriber
 		def send(msg)
 			@out << msg
-			@out.close
-			@close.call if @close
+			close
 		end
 
 		def send_keepalive
@@ -252,7 +268,7 @@ class Maru::Master < Sinatra::Base
 			settings.group_subscribers.each do |socket|
 				next if !group.public and not (socket.user == group.user or socket.user.is_admin)
 
-				socket.send( {type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total }.to_json )
+				socket.send( { type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total }.to_json )
 			end
 		end
 	end
@@ -271,7 +287,21 @@ class Maru::Master < Sinatra::Base
 		erb :index
 	end
 
-	get '/subscribe' do
+	get '/subscribe.event-stream' do
+		content_type "text/event-stream"
+
+		stream :keep_open do |out|
+			socket = EventStreamSubscriber.new( @user, out )
+
+			socket.onclose do
+				settings.group_subscribers.delete socket
+			end
+
+			settings.group_subscribers << socket
+		end
+	end
+
+	get '/subscribe.poll' do
 		content_type "application/json"
 
 		stream :keep_open do |out|
