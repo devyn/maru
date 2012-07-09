@@ -51,8 +51,7 @@ class Maru::Master < Sinatra::Base
 		property :prerequisites, Json,    :required => true, :default => []
 		property :output_dir,    String,  :required => true, :length  => 255
 
-		property :last_completion_at,          DateTime
-		property :average_completion_interval, Float
+		property :average_job_time, Float
 
 		timestamps :created_at
 
@@ -61,14 +60,16 @@ class Maru::Master < Sinatra::Base
 		end
 
 		def estimated_time_left
-			current = jobs(:completed_at => nil).length
+			current     = jobs(:completed_at => nil).length
+			most_recent = jobs(:completed_at.not => nil, :order => [:completed_at.desc]).first
+			processing  = jobs(:worker.not => nil, :completed_at => nil).length
 
 			if current == 0
 				"none"
-			elsif last_completion_at.nil?
+			elsif most_recent.nil?
 				"unknown"
 			else
-				if (t = average_completion_interval * current - (Time.now - last_completion_at.to_time)) > 0
+				if (t = average_job_time * current / processing - (Time.now - most_recent.completed_at.to_time)) > 0
 					t.humanize_seconds
 				else
 					"unknown"
@@ -738,14 +739,13 @@ class Maru::Master < Sinatra::Base
 			job.update :completed_at => Time.now
 
 			group = job.group
-			if group.last_completion_at.nil?
-				group.average_completion_interval = job.completed_at.to_time - job.assigned_at.to_time
-			elsif (d = job.completed_at.to_time - group.last_completion_at.to_time) > group.average_completion_interval * 4
+			if group.average_job_time.nil?
+				group.average_job_time = job.completed_at.to_time - job.assigned_at.to_time
+			elsif (d = job.completed_at.to_time - job.assigned_at.to_time) > group.average_job_time * 4
 				# discard as an outlier
 			else
-				group.average_completion_interval = group.average_completion_interval * 0.9 + d * 0.1
+				group.average_job_time = group.average_job_time * 0.9 + d * 0.1
 			end
-			group.last_completion_at = job.completed_at
 			group.save
 
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;32mcompleted by \e[0m#{worker.to_color}"
