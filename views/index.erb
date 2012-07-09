@@ -14,7 +14,9 @@
 				</div>
 				<div class="info">
 					<div class="name"><%== group.name %></div>
-					<% if group.user == @user or @user.is_admin %><a class="delete" onclick="deleteGroup(<%== group.id %>)">delete</a><% end %>
+					<% if @user and (group.user == @user or @user.is_admin) %>
+						<a class="delete" onclick="deleteGroup(<%== group.id %>)">delete</a>
+					<% end %>
 					<div class="owner"><%== group.user.email %></div>
 				</div>
 			</li>
