@@ -51,7 +51,8 @@ class Maru::Master < Sinatra::Base
 		property :prerequisites, Json,    :required => true, :default => []
 		property :output_dir,    String,  :required => true, :length  => 255
 
-		property :average_job_time, Float
+		property :average_job_time,          Float
+		property :average_amount_of_workers, Float
 
 		timestamps :created_at
 
@@ -62,14 +63,13 @@ class Maru::Master < Sinatra::Base
 		def estimated_time_left
 			current     = jobs(:completed_at => nil).length
 			most_recent = jobs(:completed_at.not => nil, :order => [:completed_at.desc]).first
-			processing  = jobs(:worker.not => nil, :completed_at => nil).length
 
 			if current == 0
 				"none"
-			elsif most_recent.nil? or average_job_time.nil?
+			elsif most_recent.nil? or average_job_time.nil? or average_amount_of_workers.nil?
 				"unknown"
 			else
-				if (t = average_job_time * current / processing - (Time.now - most_recent.completed_at.to_time)) > 0
+				if (t = average_job_time * current / average_amount_of_workers - (Time.now - most_recent.completed_at.to_time)) > 0
 					t.humanize_seconds
 				else
 					"unknown"
@@ -739,13 +739,23 @@ class Maru::Master < Sinatra::Base
 			job.update :completed_at => Time.now
 
 			group = job.group
+			dt    = job.completed_at.to_time - job.assigned_at.to_time
+			w     = group.jobs(:worker.not => nil, :completed_at => nil).length + 1
+
 			if group.average_job_time.nil?
-				group.average_job_time = job.completed_at.to_time - job.assigned_at.to_time
-			elsif (d = job.completed_at.to_time - job.assigned_at.to_time) > group.average_job_time * 4
+				group.average_job_time = dt
+			elsif dt > group.average_job_time * 4
 				# discard as an outlier
 			else
-				group.average_job_time = group.average_job_time * 0.9 + d * 0.1
+				group.average_job_time = group.average_job_time * 0.9 + dt * 0.1
 			end
+
+			if group.average_amount_of_workers.nil?
+				group.average_amount_of_workers = w
+			else
+				group.average_amount_of_workers = group.average_amount_of_workers * 0.7 + w + 0.3
+			end
+
 			group.save
 
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;32mcompleted by \e[0m#{worker.to_color}"
