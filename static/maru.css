@@ -335,7 +335,6 @@ a:hover {
 	height: 20px;
 	padding: 5px;
 	top: -30px;
-	overflow: auto;
 }
 
 .group .info > * {
@@ -348,6 +347,32 @@ a:hover {
 
 .group .info .owner {
 	float: right;
+}
+
+.group .info .delete {
+	float: right;
+	background-color: #903030;
+	position: relative;
+	top: -6px;
+	left: 6px;
+	border-bottom-right-radius: 10px;
+	border-top-right-radius: 10px;
+	padding: 6px 0;
+	margin: 0;
+	width: 0;
+	opacity: 0;
+
+	-webkit-transition: all 0.2s ease-in-out;
+	-moz-transition: all 0.2s ease-in-out;
+	-ms-transition: all 0.2s ease-in-out;
+	-o-transition: all 0.2s ease-in-out;
+}
+
+.group.selected .info .delete {
+	padding: 6px 15px;
+	margin-left: 3px;
+	width: 2.8em;
+	opacity: 1;
 }
 
 #details h1 {
@@ -402,9 +427,9 @@ a:hover {
 }
 
 #processing-jobs th {
-	padding-left: 1em;
 	color: #606060;
 	font-weight: normal;
+	padding-left: 1em;
 }
 
 #processing-jobs td {

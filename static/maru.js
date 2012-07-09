@@ -1,4 +1,4 @@
-function selectJob(el) {
+function selectGroup(el) {
 	var curSel = document.querySelector(".group.selected");
 	if (curSel && curSel.id !== el.id) {
 		curSel.className = 'group';
@@ -16,10 +16,25 @@ function selectJob(el) {
 	}
 }
 
+function deleteGroup(group) {
+	var req = new XMLHttpRequest();
+
+	req.onreadystatechange = function () {
+		if (req.readyState === 4 && req.status === 204) {
+			var groupEl = document.getElementById("group-" + group);
+
+			if (groupEl && groupEl.parentNode) groupEl.parentNode.removeChild(groupEl);
+		}
+	};
+
+	req.open('DELETE', "/group/"+group);
+	req.send(null);
+}
+
 function setDetails(group, onsuccess) {
 	var req = new XMLHttpRequest();
 
-	req.onreadystatechange = function() {
+	req.onreadystatechange = function () {
 		if (req.readyState === 4) {
 			if (req.status === 200) {
 				if (typeof onsuccess === 'function') onsuccess();
@@ -32,14 +47,6 @@ function setDetails(group, onsuccess) {
 
 	req.open('GET', "/group/"+group+"/details");
 	req.send(null);
-}
-
-function setGroupOnclicks() {
-	var groups = document.getElementsByClassName("group");
-
-	for (var i = 0; i < groups.length; i++) {
-		groups[i].onclick = function () {selectJob(this)};
-	}
 }
 
 function subscribeGroups() {
@@ -409,8 +416,6 @@ function adminRemoveUser(user, flashTarget) {
 }
 
 window.addEventListener('load', function () {
-	setGroupOnclicks();
-
 	var error = document.getElementById("error");
 	if (error) {
 		error.onclick = hideError;

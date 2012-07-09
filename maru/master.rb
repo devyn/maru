@@ -15,6 +15,8 @@ class Maru::Master < Sinatra::Base
 
 		belongs_to :user
 
+		has n, :jobs, :constraint => :destroy
+
 		property :id,            Serial
 		property :name,          String,  :required => true, :length  => 255
 		property :details,       Json,    :default  => {}
@@ -27,8 +29,6 @@ class Maru::Master < Sinatra::Base
 		property :output_dir,    String,  :required => true, :length  => 255
 
 		timestamps :created_at
-
-		has n, :jobs
 
 		def to_color base=37
 			"\e[1;31m##{self.id} \e[0;#{base}m(\e[1;36m#{self.name}\e[0;#{base}m)\e[0m"
@@ -590,9 +590,17 @@ class Maru::Master < Sinatra::Base
 		halt 501
 	end
 
-	post '/group/:id/delete' do
-		# Deletes a group
-		halt 501
+	delete '/group/:id' do
+		must_be_able_to_own_groups!
+
+		halt 404 unless @group = Group.get(params[:id])
+		halt 403 unless @group.user == @user or @user.is_admin
+
+		if @group.destroy
+			halt 204
+		else
+			halt 500
+		end
 	end
 
 	get '/group/:id/details' do
