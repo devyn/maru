@@ -277,7 +277,7 @@ class Maru::Master < Sinatra::Base
 			if @user.is_admin
 				@groups = Group.all
 			else
-				@groups = @user.groups.to_a + Group.all(:public => true).to_a
+				@groups = (@user.groups.to_a + Group.all(:public => true).to_a).uniq
 			end
 		else
 			@groups = Group.all(:public => true)
