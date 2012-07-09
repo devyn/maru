@@ -753,7 +753,7 @@ class Maru::Master < Sinatra::Base
 			if group.average_amount_of_workers.nil?
 				group.average_amount_of_workers = w
 			else
-				group.average_amount_of_workers = group.average_amount_of_workers * 0.7 + w + 0.3
+				group.average_amount_of_workers = group.average_amount_of_workers * 0.7 + w * 0.3
 			end
 
 			group.save
