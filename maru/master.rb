@@ -20,7 +20,7 @@ class Numeric
 		out << "#{days.floor} days"       if days >= 1
 		out << "#{hours.floor} hours"     if hours   >= 1
 		out << "#{minutes.floor} minutes" if minutes >= 1
-		out << "%.1f seconds" % seconds   if seconds >= 0 or out.empty?
+		out << "%.1f seconds" % seconds   if out.empty? or (hours < 1 and seconds >= 0)
 
 		if out.empty?
 			"0 seconds"
