@@ -361,7 +361,9 @@ class Maru::Master < Sinatra::Base
 		if @worker.save
 			{:worker => @worker}.to_json
 		else
-			if @worker = Worker.get( :name => params[:name], :user => nil )
+			if w = Worker.get( :name => params[:name], :user => nil )
+				@worker = w
+
 				@worker.user = @user
 
 				if @worker.save
