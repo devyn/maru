@@ -394,7 +394,7 @@ class Maru::Master < Sinatra::Base
 		end
 	end
 
-	post '/worker/:id/delete' do
+	delete '/worker/:id' do
 		must_be_able_to_own_workers!
 
 		@worker = Worker.get(params[:id])
@@ -512,7 +512,7 @@ class Maru::Master < Sinatra::Base
 		end
 	end
 
-	post '/user/:id/delete' do
+	delete '/user/:id' do
 		must_be_logged_in!
 
 		halt 404 unless @target_user = User.get(params[:id])

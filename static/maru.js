@@ -291,7 +291,7 @@ function deleteWorker(worker, flashTarget) {
 		}
 	};
 
-	req.open("POST", "/worker/" + worker + "/delete");
+	req.open("DELETE", "/worker/" + worker);
 	req.send(null);
 }
 
@@ -408,7 +408,7 @@ function deleteUser(user, userIsMe, flashTarget) {
 		}
 	};
 
-	req.open("POST", "/user/" + user + "/delete");
+	req.open("DELETE", "/user/" + user);
 	req.send(null);
 }
 
