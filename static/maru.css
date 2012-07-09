@@ -400,6 +400,7 @@ a:hover {
 #status div::before {
 	display: inline-block;
 	width: 10em;
+	color: #d0d0d0;
 }
 
 #status .complete::before {
