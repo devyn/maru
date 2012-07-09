@@ -12,7 +12,7 @@
 			<ul>
 			<% if logged_in? %>
 				<% if @user.is_admin || @user.can_own_groups %>
-					<li><a href="/group/new">new group</a></lI>
+					<li><a href="/group/new">submit work</a></lI>
 				<% end %>
 				<% if @user.is_admin %>
 					<li><a href="/admin">admin</a></li>
