@@ -36,6 +36,8 @@ function setDetails(group, onsuccess) {
 
 	req.onreadystatechange = function () {
 		if (req.readyState === 4) {
+			var details = document.getElementById("details");
+
 			if (req.status === 200) {
 				if (typeof onsuccess === 'function') onsuccess();
 				details.innerHTML = req.response;
