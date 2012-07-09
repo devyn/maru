@@ -152,7 +152,7 @@ function hideError() {
 function flash(el, type) {
 	var animationend = function () {
 		el.style.animation = "";
-		el.style.mozAnimation = "";
+		el.style.MozAnimation = "";
 		el.style.webkitAnimation = "";
 		el.style.oAnimation = "";
 
@@ -166,7 +166,7 @@ function flash(el, type) {
 	el.addEventListener('oAnimationEnd', animationend, true);
 
 	el.style.animation = type + " 1s";
-	el.style.mozAnimation = type + " 1s";
+	el.style.MozAnimation = type + " 1s";
 	el.style.webkitAnimation = type + " 1s";
 	el.style.oAnimation = type + " 1s";
 }
