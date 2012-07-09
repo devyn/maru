@@ -115,12 +115,14 @@ function processSubMessage(message) {
 			  , nComplete   = details.querySelector("#status .complete")
 			  , nProcessing = details.querySelector("#status .processing")
 			  , nRemaining  = details.querySelector("#status .remaining")
+				, eTimeLeft   = details.querySelector("#status .estimated-time-left")
 			  , lProcessing = details.querySelector("#processing-jobs tbody")
 			  ;
 
 			nComplete.textContent   = message.complete;
 			nProcessing.textContent = message.processing.length;
 			nRemaining.textContent  = message.total - message.complete - message.processing.length;
+			eTimeLeft.textContent   = message.estimatedTimeLeft;
 
 			while (lProcessing.hasChildNodes()) lProcessing.removeChild(lProcessing.lastChild);
 

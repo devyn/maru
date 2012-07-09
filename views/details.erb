@@ -5,7 +5,8 @@
 <div id="status">
 	<div class="complete"><%== @group.jobs( :completed_at.not => nil ).length %></div>
 	<div class="processing"><%== (processing = @group.jobs( :worker.not => nil, :completed_at => nil )).length %></div>
-	<div class="remaining"><%== @group.jobs( :worker => nil ).length %></div>
+	<div class="remaining"><%== remaining = @group.jobs( :worker => nil ).length %></div>
+	<div class="estimated-time-left"><%== @group.estimated_time_left %></div>
 </div>
 
 <h3>Processing</h3>

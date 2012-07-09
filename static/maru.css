@@ -399,7 +399,7 @@ a:hover {
 
 #status div::before {
 	display: inline-block;
-	width: 7em;
+	width: 10em;
 }
 
 #status .complete::before {
@@ -414,8 +414,12 @@ a:hover {
 	content: "remaining: ";
 }
 
-#status div::after {
+#status .complete::after, #status .processing::after, #status .remaining::after {
 	content: " job(s)";
+}
+
+#status .estimated-time-left::before {
+	content: "estimated time left: ";
 }
 
 #processing-jobs {

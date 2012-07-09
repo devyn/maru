@@ -9,6 +9,29 @@ require 'eventmachine'
 
 require_relative 'plugin'
 
+class Numeric
+	def humanize_seconds
+		days    = self / 86400
+		hours   = self % 86400 / 3600
+		minutes = self % 3600 / 60
+		seconds = self % 60
+
+		out = []
+		out << "#{days.floor} days"       if days >= 1
+		out << "#{hours.floor} hours"     if hours   >= 1
+		out << "#{minutes.floor} minutes" if minutes >= 1
+		out << "%.1f seconds" % seconds   if seconds >= 0 or out.empty?
+
+		if out.empty?
+			"0 seconds"
+		elsif out.size == 1
+			out.first
+		else
+			"#{out[0..-2].join(", ")} and #{out.last}"
+		end
+	end
+end
+
 class Maru::Master < Sinatra::Base
 	class Group
 		include DataMapper::Resource
@@ -28,10 +51,29 @@ class Maru::Master < Sinatra::Base
 		property :prerequisites, Json,    :required => true, :default => []
 		property :output_dir,    String,  :required => true, :length  => 255
 
+		property :last_completion_at,          DateTime
+		property :average_completion_interval, Float
+
 		timestamps :created_at
 
 		def to_color base=37
 			"\e[1;31m##{self.id} \e[0;#{base}m(\e[1;36m#{self.name}\e[0;#{base}m)\e[0m"
+		end
+
+		def estimated_time_left
+			current = jobs(:completed_at => nil).length
+
+			if current == 0
+				"none"
+			elsif last_completion_at.nil?
+				"unknown"
+			else
+				if (t = average_completion_interval * current - (Time.now - last_completion_at.to_time)) > 0
+					t.humanize_seconds
+				else
+					"unknown"
+				end
+			end
 		end
 
 		self.raise_on_save_failure = true
@@ -267,7 +309,7 @@ class Maru::Master < Sinatra::Base
 			settings.group_subscribers.each do |socket|
 				next if !group.public and not (socket.user == group.user or socket.user.is_admin)
 
-				socket.send( { type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total }.to_json )
+				socket.send( { type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total, estimatedTimeLeft: group.estimated_time_left }.to_json )
 			end
 		end
 	end
@@ -694,6 +736,17 @@ class Maru::Master < Sinatra::Base
 			end unless params[:files].nil?
 
 			job.update :completed_at => Time.now
+
+			group = job.group
+			if group.last_completion_at.nil?
+				group.average_completion_interval = job.completed_at.to_time - job.assigned_at.to_time
+			elsif (d = job.completed_at.to_time - group.last_completion_at.to_time) > group.average_completion_interval * 4
+				# discard as an outlier
+			else
+				group.average_completion_interval = group.average_completion_interval * 0.9 + d * 0.1
+			end
+			group.last_completion_at = job.completed_at
+			group.save
 
 			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;32mcompleted by \e[0m#{worker.to_color}"
 
