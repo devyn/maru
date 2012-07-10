@@ -727,6 +727,10 @@ class Maru::Master < Sinatra::Base
 					path = join_relative job.group.output_dir, file["name"]
 					FileUtils.mkdir_p File.dirname( path )
 					IO.copy_stream file["data"][:tempfile], path
+
+					if file["sha256"] and file["sha256"] != OpenSSL::Digest::SHA256.file( path ).hexdigest
+						halt 400, JSON.dump( :error => "SHA256 invalid for #{file["name"]}" )
+					end
 				rescue PathIsOutside
 					halt 400, JSON.dump( :error => "path leads outside of output directory" )
 				rescue Exception
