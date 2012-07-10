@@ -17,10 +17,10 @@ class Numeric
 		seconds = self % 60
 
 		out = []
-		out << "#{days.floor} days"       if days >= 1
-		out << "#{hours.floor} hours"     if hours   >= 1
-		out << "#{minutes.floor} minutes" if minutes >= 1
-		out << "%.1f seconds" % seconds   if out.empty? or (hours < 1 and seconds >= 0)
+		out << "#{days.floor} day#{'s' unless days == 1}"          if days    >= 1
+		out << "#{hours.floor} hour#{'s' unless hours == 1}"       if hours   >= 1
+		out << "#{minutes.floor} minute#{'s' unless minutes == 1}" if minutes >= 1
+		out << "%.1f second#{'s' unless seconds == 1}" % seconds   if out.empty? or (hours < 1 and seconds >= 0)
 
 		if out.empty?
 			"0 seconds"
