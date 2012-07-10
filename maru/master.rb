@@ -744,8 +744,6 @@ class Maru::Master < Sinatra::Base
 
 			if group.average_job_time.nil?
 				group.average_job_time = dt
-			elsif dt > group.average_job_time * 4
-				# discard as an outlier
 			else
 				group.average_job_time = group.average_job_time * 0.9 + dt * 0.1
 			end
