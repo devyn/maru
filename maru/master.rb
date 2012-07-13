@@ -782,7 +782,7 @@ class Maru::Master < Sinatra::Base
 			jobs = jobs.all :id.not => params[:blacklist].split( ',' ).map( &:to_i )
 		end
 
-		job = jobs.first
+		job = jobs.first :offset => rand(jobs.count)
 
 		if job.nil?
 			halt 204, JSON.dump( :error => "no jobs available" )
