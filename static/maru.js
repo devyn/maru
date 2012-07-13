@@ -419,6 +419,42 @@ function adminRemoveUser(user, flashTarget) {
 	userEl.parentNode.removeChild(userEl);
 }
 
+function setGroupNewFormKind(kind) {
+	var groupNewFormBody   = document.getElementById("group-new-form-body")
+	  , groupNewFormSubmit = document.getElementById("group-new-form-submit")
+	  ;
+
+	groupNewFormBody.innerHTML = "";
+	groupNewFormSubmit.disabled = "disabled";
+
+	if (kind !== "") {
+		var req = new XMLHttpRequest();
+
+		req.onreadystatechange = function () {
+			if (req.readyState == 4 && req.status == 200) {
+				var split        = req.responseText.split('\0')
+				  , restrictions = JSON.parse(split.splice(0, 1))
+				  ;
+
+				groupNewFormBody.innerHTML = split.join('\0');
+				groupNewFormSubmit.disabled = null;
+
+				restrictGroupNewForm(restrictions);
+			}
+		};
+
+		req.open("GET", "/group/new/form/" + kind);
+		req.send(null);
+	}
+}
+
+function restrictGroupNewForm(restrictions) {
+	console.log(restrictions);
+}
+
+function verifyGroupNewFormRestrictions(restrictions) {
+}
+
 window.addEventListener('load', function () {
 	var error = document.getElementById("error");
 	if (error) {

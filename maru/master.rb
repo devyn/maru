@@ -32,6 +32,92 @@ class Numeric
 	end
 end
 
+class Maru::BasicFilestore
+	attr_accessor :base_path, :base_url
+
+	def initialize(base_path, base_url)
+		@base_path, @base_url = base_path, base_url
+	end
+
+	def store_prerequisite(input, name, group)
+		base        = File.join(@base_path, group.id.to_s, "prerequisites")
+		target_path = File.join(base, name)
+
+		if verify_path(base, target_path)
+			FileUtils.mkdir_p(File.dirname(target_path))
+			IO::copy_stream input, target_path
+
+			url    = @base_url.chomp('/') + "/#{group.id}/prerequisites/#{name}"
+			sha256 = OpenSSL::Digest::SHA256.file(target_path).hexdigest
+
+			return [url, sha256]
+		else
+			raise SecurityViolation, "The name of the prerequisite to be stored led into a restricted area."
+		end
+	end
+
+	def delete_prerequisite(name, group)
+		base        = File.join(@base_path, group.id.to_s, "prerequisites")
+		target_path = File.join(base, name)
+
+		if verify_path(base, target_path)
+			File.unlink(target_path) if File.file? target_path
+		else
+			raise SecurityViolation, "The name of the prerequisite to be stored led into a restricted area."
+		end
+	end
+
+	def store_result(input, name, group)
+		base        = File.join(@base_path, group.id.to_s, "results")
+		target_path = File.join(base, name)
+
+		if verify_path(base, target_path)
+			FileUtils.mkdir_p(File.dirname(target_path))
+			IO::copy_stream input, target_path
+
+			url    = @base_url.chomp('/') + "/#{group.id}/results/#{name}"
+			sha256 = OpenSSL::Digest::SHA256.file(target_path).hexdigest
+
+			return [url, sha256]
+		else
+			raise SecurityViolation, "The name of the result to be stored led into a restricted area."
+		end
+	end
+
+	def delete_result(name, group)
+		base        = File.join(@base_path, group.id.to_s, "results")
+		target_path = File.join(base, name)
+
+		if verify_path(base, target_path)
+			File.unlink(target_path) if File.file? target_path
+		else
+			raise SecurityViolation, "The name of the result to be stored led into a restricted area."
+		end
+	end
+
+	def results_path(group)
+		return @base_url.chomp('/') + "/#{group.id}/results/"
+	end
+
+	def clean(group)
+		path = File.join(@base_path, group.id.to_s)
+
+		if File.directory? path
+			FileUtils.rm_r path
+		end
+	end
+
+	class SecurityViolation < Exception; end
+
+	private
+
+	def verify_path(base, path)
+		base, path = File.expand_path(base), File.expand_path(path)
+
+		path[0, base.size] == base
+	end
+end
+
 class Maru::Master < Sinatra::Base
 	class Group
 		include DataMapper::Resource
@@ -46,10 +132,9 @@ class Maru::Master < Sinatra::Base
 
 		property :kind,          String,  :required => true, :length  => 255
 
-		property :public,        Boolean, :required => true, :default => true
+		property :public,        Boolean, :required => true, :default => false
 
-		property :prerequisites, Json,    :required => true, :default => []
-		property :output_dir,    String,  :required => true, :length  => 255
+		property :prerequisites, Json,    :default => []
 
 		property :average_job_time,          Float
 		property :average_amount_of_workers, Float
@@ -76,8 +161,6 @@ class Maru::Master < Sinatra::Base
 				end
 			end
 		end
-
-		self.raise_on_save_failure = true
 	end
 
 	class Job
@@ -86,20 +169,20 @@ class Maru::Master < Sinatra::Base
 		belongs_to :group
 		belongs_to :worker, :required => false
 
-		property :id,           Serial
-		property :name,         String,   :required => true, :length => 255
-		property :details,      Json,     :default  => {}
+		property :id,            Serial
+		property :name,          String,   :required => true, :length => 255
+		property :details,       Json,     :default  => {}
 
-		property :expiry,       Integer,  :required => true, :default => 3600 # in seconds after assigned_at
+		property :expiry,        Integer,  :required => true, :default => 3600 # in seconds after assigned_at
 
-		property :assigned_at,  DateTime
-		property :completed_at, DateTime
+		property :prerequisites, Json,     :default => []
+
+		property :assigned_at,   DateTime
+		property :completed_at,  DateTime
 
 		def to_color base=37
 			"\e[1;35m##{self.id} \e[0;#{base}m(\e[1;36m#{self.group.name} \e[0;#{base}m/ \e[36m#{self.name}\e[#{base}m)\e[0m"
 		end
-
-		self.raise_on_save_failure = true
 	end
 
 	class Worker
@@ -200,8 +283,6 @@ class Maru::Master < Sinatra::Base
 		end
 	end
 
-	class PathIsOutside < Exception; end
-
 	enable :static
 
 	set    :root,          File.join( File.dirname( __FILE__ ), '..' )
@@ -210,6 +291,8 @@ class Maru::Master < Sinatra::Base
 	set    :public_folder, -> { File.join( root, 'static' ) }
 
 	set    :erubis,        :escape_html => true
+
+	set    :filestore,     nil
 
 	set    :group_subscribers, []
 
@@ -254,18 +337,6 @@ class Maru::Master < Sinatra::Base
 	end
 
 	helpers do
-		def generate_id
-			rand( 36 ** 12 ).to_s( 36 )
-		end
-
-		def join_relative( base, path )
-			base = File.expand_path( base )
-			o    = File.expand_path( File.join( base, path ) )
-
-			raise PathIsOutside if o[0,base.size] != base
-			return o
-		end
-
 		def get_worker
 			@worker
 		end
@@ -589,32 +660,44 @@ class Maru::Master < Sinatra::Base
 		erb :group_new
 	end
 
+	get '/group/new/form/*' do |kind|
+		content_type "application/x-json-and-html-separated-by-zero-byte"
+
+		halt 404 unless plugin = Maru::Plugin[kind]
+
+		f = Maru::Plugin::GroupFormBuilder.new
+
+		plugin.build_group_form(f)
+
+		%'#{f.restrictions.to_json}\0#{f.html}'
+	end
+
 	post '/group/new' do
 		must_be_able_to_own_groups!
 
 		if params[:kind].nil? or !(plugin = Maru::Plugin[params[:kind]])
 			@error = "- unsupported group kind"
-			halt 501, erb(:group_new)
+			halt 400, erb(:group_new)
 		end
 
-		group      = Group.new( params )
-		group.id   = nil
-		group.kind = plugin.machine_name
-		group.user = @user
+		group        = Group.new
+		group.user   = @user
+		group.kind   = params[:kind]
+		group.public = params[:public] ? true : false
 
-		plugin_errors = plugin.validate_group( group ).to_a
+		if !(errors = plugin.validate_group_params(params)).empty?
+			@error = errors.map { |e| "- #{e}" }.join("\n")
+			halt 400, erb(:group_new)
+		end
 
-		if group.valid? and plugin_errors.empty?
-			group.save
+		group_builder = Maru::Plugin::GroupBuilder.new group, settings.filestore
 
-			plugin.create_jobs_for group
+		plugin.build_group(group_builder, params)
 
-			warn "\e[1m> \e[0mGroup #{group.to_color}\e[0m created with \e[32m#{group.jobs.length}\e[0m jobs"
-
+		if group_builder.save
 			redirect to('/')
 		else
-			@error = (group.errors.full_messages + plugin_errors).map {|s| "- #{s}"}.join("\n")
-
+			@error = group.errors.full_messages.map { |e| "- #{e}" }.join("\n")
 			halt 400, erb(:group_new)
 		end
 	end
@@ -642,6 +725,10 @@ class Maru::Master < Sinatra::Base
 		halt 403 unless @group.user == @user or @user.is_admin
 
 		if @group.destroy
+			if settings.filestore.respond_to? :clean
+				settings.filestore.clean @group
+			end
+
 			halt 204
 		else
 			halt 500
@@ -706,65 +793,73 @@ class Maru::Master < Sinatra::Base
 
 			EM.next_tick { update_group_status job.group }
 
-			%{{"job":#{job.to_json( :exclude => [:worker_id, :user_id], :relationships => {:group => {:exclude => [:output_dir], :relationships => {:user => {:only => [:email]}}}} )}}}
+			%{{"job":#{job.to_json( :exclude => [:worker_id, :user_id], :relationships => {:group => {:relationships => {:user => {:only => [:email]}}}} )}}}
 		end
 	end
 
 	post '/job/:id' do
 		content_type "application/json"
 
-		worker = get_worker!
+		begin
+			worker = get_worker!
 
-		job = Job.first :id => params[:id], :worker => worker
+			job = Job.first :id => params[:id], :worker => worker
 
-		if job.nil?
-			halt 404, JSON.dump( :error => "job not found" )
-		else
-			params[:files] = [params[:files]] if params[:files].is_a? Hash
+			result_url = nil
 
-			params[:files].each do |file|
-				begin
-					path = join_relative job.group.output_dir, file["name"]
-					FileUtils.mkdir_p File.dirname( path )
-					IO.copy_stream file["data"][:tempfile], path
+			if job.nil?
+				halt 404, JSON.dump( :error => "job not found" )
+			else
+				params[:files] = [params[:files]] if params[:files].is_a? Hash
 
-					if file["sha256"] and file["sha256"] != OpenSSL::Digest::SHA256.file( path ).hexdigest
-						halt 400, JSON.dump( :error => "SHA256 invalid for #{file["name"]}" )
+				params[:files].each do |file|
+					begin
+						if settings.filestore.respond_to? :store_result
+							file["data"][:tempfile].rewind
+
+							result_url, sha256 = settings.filestore.store_result file["data"][:tempfile], file["name"], job.group
+
+							if file["sha256"] and file["sha256"] != sha256
+								settings.filestore.delete_result file["name"], job.group
+								halt 400, JSON.dump( :error => "SHA256 invalid for #{file["name"]}" )
+							end
+						else
+							# discard it with a warning
+							warn "> Warning: result discarded because filestore is unable to store it"
+						end
+					ensure
+						file["data"][:tempfile].close
 					end
-				rescue PathIsOutside
-					halt 400, JSON.dump( :error => "path leads outside of output directory" )
-				rescue Exception
-					halt 500, JSON.dump( :error => $!.to_s )
-				ensure
-					file["data"][:tempfile].close
+				end unless params[:files].nil?
+
+				job.update :completed_at => Time.now
+
+				group = job.group
+				dt    = job.completed_at.to_time - job.assigned_at.to_time
+				w     = group.jobs(:worker.not => nil, :completed_at => nil).length + 1
+
+				if group.average_job_time.nil?
+					group.average_job_time = dt
+				else
+					group.average_job_time = group.average_job_time * 0.9 + dt * 0.1
 				end
-			end unless params[:files].nil?
 
-			job.update :completed_at => Time.now
+				if group.average_amount_of_workers.nil?
+					group.average_amount_of_workers = w
+				else
+					group.average_amount_of_workers = group.average_amount_of_workers * 0.7 + w * 0.3
+				end
 
-			group = job.group
-			dt    = job.completed_at.to_time - job.assigned_at.to_time
-			w     = group.jobs(:worker.not => nil, :completed_at => nil).length + 1
+				group.save
 
-			if group.average_job_time.nil?
-				group.average_job_time = dt
-			else
-				group.average_job_time = group.average_job_time * 0.9 + dt * 0.1
+				warn "\e[1m> \e[0mJob #{job.to_color} \e[1;32mcompleted by \e[0m#{worker.to_color}"
+
+				EM.next_tick { update_group_status job.group }
+
+				JSON.dump( :success => true, :result_url => result_url )
 			end
-
-			if group.average_amount_of_workers.nil?
-				group.average_amount_of_workers = w
-			else
-				group.average_amount_of_workers = group.average_amount_of_workers * 0.7 + w * 0.3
-			end
-
-			group.save
-
-			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;32mcompleted by \e[0m#{worker.to_color}"
-
-			EM.next_tick { update_group_status job.group }
-
-			JSON.dump( :success => true )
+		rescue Exception
+			halt 500, JSON.dump( :error => $!.to_s )
 		end
 	end
 

@@ -2,5 +2,9 @@ require File.join( File.dirname( __FILE__ ), "maru/master" )
 
 use Rack::Session::Cookie, :secret => "maru", :expire_after => 2592000 # 1 month
 
+## uncomment to use a basic filestore. configuration is up to you.
+## without a filestore, maru will be pretty useless, and most things won't work.
+#Maru::Master.settings.filestore = Maru::BasicFilestore.new "/srv/http/example.com/files/maru/", "http://example.com/files/maru/"
+
 #use Rack::CommonLogger
 run Maru::Master

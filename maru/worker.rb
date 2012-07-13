@@ -188,6 +188,10 @@ module Maru
 			plugin = Maru::Plugin[job["group"]["kind"]]
 
 			if plugin.respond_to? :process_job
+				job["prerequisites"].each do |pre|
+					download_prerequisite pre
+				end if job["prerequisites"]
+
 				files = plugin.process_job( job ).map { |f| {"name" => f, "data" => File.new( f ), "sha256" => OpenSSL::Digest::SHA256.file( f ).hexdigest} }
 
 				puts "\e[1m  > \e[0;34mUploading results...\e[0m"
@@ -195,8 +199,12 @@ module Maru
 				master.complete_job job["id"], :files => files
 
 				files.each do |f|
-					File.unlink f["name"]
+					File.unlink(f["name"])
 				end
+
+				job["prerequisites"].each do |pre|
+					File.unlink(pre["destination"]) if verify_path(pre["destination"]) and File.file? pre["destination"]
+				end if job["prerequisites"]
 
 				puts "\e[1m> #{format_job job, master} \e[1;32mdone\e[0m"
 			end
@@ -211,30 +219,34 @@ module Maru
 
 			Dir.chdir path do
 				group["prerequisites"].each do |pre|
-					next unless verify_path( pre["destination"] )
-
-					if File.file? pre["destination"]
-						next if check_consistency pre["destination"], pre["sha256"]
-					end
-
-					puts "\e[1m  > \e[0;34mDownloading #{pre["destination"]} from #{pre["source"]}...\e[0m"
-
-					RestClient::Resource.new( pre["source"], :raw_response => true ).get do |response,request,result,&block|
-						if response.code == 200
-							File.open pre["destination"], 'w' do |f|
-								IO::copy_stream response.file, f
-							end
-
-							if check_consistency( pre["destination"], pre["sha256"] ) == false
-								raise Inconsistent, "#{pre["destination"]} does not match the checksum."
-							end
-						else
-							response.return! request, result, &block
-						end
-					end
-				end
+					download_prerequisite pre
+				end if group["prerequisites"]
 
 				yield
+			end
+		end
+
+		def download_prerequisite(pre)
+			return unless verify_path( pre["destination"] )
+
+			if File.file? pre["destination"]
+				return if check_consistency pre["destination"], pre["sha256"]
+			end
+
+			puts "\e[1m  > \e[0;34mDownloading #{pre["destination"]} from #{pre["source"]}...\e[0m"
+
+			RestClient::Resource.new( pre["source"], :raw_response => true ).get do |response,request,result,&block|
+				if response.code == 200
+					File.open pre["destination"], 'w' do |f|
+						IO::copy_stream response.file, f
+					end
+
+					if pre["sha256"] and check_consistency( pre["destination"], pre["sha256"] ) == false
+						raise Inconsistent, "#{pre["destination"]} does not match the checksum."
+					end
+				else
+					response.return! request, result, &block
+				end
 			end
 		end
 
