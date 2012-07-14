@@ -7,7 +7,7 @@
 <div id="groupsPane">
 	<ul id="groups">
 		<% @groups.each do |group| %>
-			<li id="group-<%== group.id %>" class="group" onclick="selectGroup(this)">
+			<li id="group-<%== group.id %>" class="group<%= " paused" if group.paused %>" onclick="selectGroup(this)">
 				<div class="progress">
 					<% n_total = group.jobs.length; n_complete = group.jobs(:completed_at.not => nil).length; n_processing = group.jobs(:worker.not => nil, :completed_at => nil).length %>
 					<div class="complete" style="width:<%= n_complete/n_total.to_f*100 %>%;"></div><div class="processing" style="width:<%= n_processing/n_total.to_f*100 %>%;"></div>
@@ -15,7 +15,9 @@
 				<div class="info">
 					<div class="name"><%== group.name %></div>
 					<% if @user and (group.user == @user or @user.is_admin) %>
-						<a class="delete" onclick="deleteGroup(<%== group.id %>)">delete</a>
+						<div class="delete" onclick="deleteGroup(<%== group.id %>)"><span></span></div>
+						<div class="pause" onclick="pauseGroup(<%== group.id %>)"><span></span></div>
+						<div class="resume" onclick="resumeGroup(<%== group.id %>)"><span></span></div>
 					<% end %>
 					<div class="owner"><%== group.user.email %></div>
 				</div>

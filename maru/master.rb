@@ -133,6 +133,7 @@ class Maru::Master < Sinatra::Base
 		property :id,            Serial
 		property :name,          String,  :required => true, :length  => 255
 		property :details,       Json,    :default  => {}
+		property :paused,        Boolean, :required => true, :default => false
 
 		property :kind,          String,  :required => true, :length  => 255
 
@@ -724,6 +725,32 @@ class Maru::Master < Sinatra::Base
 		halt 501
 	end
 
+	post '/group/:id/pause' do
+		must_be_able_to_own_groups!
+
+		halt 404 unless @group = Group.get(params[:id])
+		halt 403 unless @group.user == @user or @user.is_admin
+
+		if @group.update :paused => true
+			halt 204
+		else
+			halt 500
+		end
+	end
+
+	post '/group/:id/resume' do
+		must_be_able_to_own_groups!
+
+		halt 404 unless @group = Group.get(params[:id])
+		halt 403 unless @group.user == @user or @user.is_admin
+
+		if @group.update :paused => false
+			halt 204
+		else
+			halt 500
+		end
+	end
+
 	delete '/group/:id' do
 		must_be_able_to_own_groups!
 
@@ -782,7 +809,7 @@ class Maru::Master < Sinatra::Base
 
 		worker = get_worker!
 
-		jobs = Job.all :worker => nil, :group => { :kind => params[:kinds].split( ',' ) }
+		jobs = Job.all :worker => nil, :group => { :kind => params[:kinds].split( ',' ), :paused => false }
 
 		unless params[:blacklist].to_s.empty?
 			jobs = jobs.all :id.not => params[:blacklist].split( ',' ).map( &:to_i )

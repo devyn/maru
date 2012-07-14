@@ -307,6 +307,10 @@ a:hover {
 	box-shadow: 0 0 10px #d09040;
 }
 
+.group.paused.selected {
+	box-shadow: 0 0 10px #4090d0;
+}
+
 .group .progress, .group .progress * {
 	margin: 0;
 	padding: 0;
@@ -349,18 +353,19 @@ a:hover {
 	float: right;
 }
 
-.group .info .delete {
+.group .info .delete, .group .info .pause, .group .info .resume {
+	display: block;
+	cursor: pointer;
+
 	float: right;
-	background-color: #903030;
 	position: relative;
 	top: -6px;
 	left: 6px;
-	border-bottom-right-radius: 10px;
-	border-top-right-radius: 10px;
 	padding: 6px 0;
 	margin: 0;
 	width: 0;
 	opacity: 0;
+	overflow: hidden;
 
 	-webkit-transition: all 0.2s ease-in-out;
 	-moz-transition: all 0.2s ease-in-out;
@@ -368,11 +373,49 @@ a:hover {
 	-o-transition: all 0.2s ease-in-out;
 }
 
-.group.selected .info .delete {
-	padding: 6px 15px;
-	margin-left: 3px;
-	width: 2.8em;
+.group .info .delete span, .group .info .pause span, .group .info .resume span {
+	display: block;
+	width: 24px;
+	height: 24px;
+	position: relative;
+	top: -2px;
+}
+
+.group .info .delete {
+	border-bottom-right-radius: 10px;
+	border-top-right-radius: 10px;
+
+	background-color: #903030;
+}
+
+.group .info .delete span {
+	background-image: url(/img/delete-icon.svg);
+}
+
+.group .info .pause {
+	background-color: #4090d0;
+}
+
+.group .info .pause span {
+	background-image: url(/img/pause-icon.svg);
+}
+
+.group .info .resume {
+	background-color: #d09040;
+}
+
+.group .info .resume span {
+	background-image: url(/img/resume-icon.svg);
+}
+
+.group.selected .info .delete, .group.selected:not(.paused) .info .pause, .group.selected.paused .info .resume {
+	padding: 6px 6px;
+	width: 24px;
 	opacity: 0.9;
+}
+
+.group.selected:not(.paused) .info .pause, .group.selected.paused .info .resume {
+	margin-left: 3px;
 }
 
 #details h1 {

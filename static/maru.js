@@ -7,12 +7,46 @@ function selectGroup(el) {
 	var details = document.getElementById("details");
 
 	if (el.className.match(/selected/)) {
-		el.className = 'group';
+		el.className = el.className.replace(/ *selected/, '');
 		details.innerHTML = "";
 	} else {
 		setDetails(el.id.replace(/^group-/, ''), function () {
-			el.className = 'group selected';
+			el.className += ' selected';
 		});
+	}
+}
+
+function pauseGroup(group) {
+	var el = document.getElementById("group-" + group);
+
+	if (!el.className.match(/paused/)) {
+		var req = new XMLHttpRequest();
+
+		req.onreadystatechange = function () {
+			if (req.readyState === 4 && req.status === 204) {
+				el.className += ' paused';
+			}
+		};
+
+		req.open("POST", "/group/" + group + "/pause");
+		req.send(null);
+	}
+}
+
+function resumeGroup(group) {
+	var el = document.getElementById("group-" + group);
+
+	if (el.className.match(/paused/)) {
+		var req = new XMLHttpRequest();
+
+		req.onreadystatechange = function () {
+			if (req.readyState === 4 && req.status === 204) {
+				el.className = el.className.replace(/ *paused/, '');
+			}
+		};
+
+		req.open("POST", "/group/" + group + "/resume");
+		req.send(null);
 	}
 }
 
