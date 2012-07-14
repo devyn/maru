@@ -40,7 +40,7 @@ module Maru
 				o = job["group"]["details"]["output name"]
 
 				if spawn "blender", "--background", File.expand_path(f), "--render-output", File.expand_path(o), "--threads", "1", "--render-frame", n.to_s
-					files [o.sub(/#+/){|s|"%0#{s.length}d" % n}]
+					files( o.sub( /#+/ ) { |s| "%0#{s.length}d" % n } )
 				else
 					if $?.termsig
 						fail "blender interrupted (signal #{$?.termsig})"
