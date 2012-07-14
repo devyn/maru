@@ -859,6 +859,9 @@ class Maru::Master < Sinatra::Base
 				JSON.dump( :success => true, :result_url => result_url )
 			end
 		rescue Exception
+			warn "\e[1m> \e[31mError in completion of ##{params[:id]}: #{$1.class.name}: #$!"
+			$!.backtrace.each { |x| warn "    #{x}" }
+
 			halt 500, JSON.dump( :error => $!.to_s )
 		end
 	end
