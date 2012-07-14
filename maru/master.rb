@@ -228,6 +228,8 @@ class Maru::Master < Sinatra::Base
 		# Session revocation
 		property :invalid_before, DateTime, :required => true, :default => Time.at(0)
 
+		validates_format_of :email, :as => :email_address
+
 		def password=(pass)
 			self.password_salt = rand( 36 ** 4 ).to_s( 36 )
 			self.password_hash = OpenSSL::HMAC.hexdigest( OpenSSL::Digest::SHA256.new, self.password_salt, pass )
