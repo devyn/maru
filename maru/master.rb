@@ -47,6 +47,8 @@ class Maru::BasicFilestore
 			FileUtils.mkdir_p(File.dirname(target_path))
 			IO::copy_stream input, target_path
 
+			File.chmod(0666 & ~File.umask, target_path) # see issue #15 
+
 			url    = @base_url.chomp('/') + "/#{group.id}/prerequisites/#{name}"
 			sha256 = OpenSSL::Digest::SHA256.file(target_path).hexdigest
 
@@ -74,6 +76,8 @@ class Maru::BasicFilestore
 		if verify_path(base, target_path)
 			FileUtils.mkdir_p(File.dirname(target_path))
 			IO::copy_stream input, target_path
+
+			File.chmod(0666 & ~File.umask, target_path) # see issue #15
 
 			url    = @base_url.chomp('/') + "/#{group.id}/results/#{name}"
 			sha256 = OpenSSL::Digest::SHA256.file(target_path).hexdigest
