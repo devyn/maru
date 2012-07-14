@@ -327,6 +327,13 @@ function createUser(formEl) {
 
 				var user  = document.createElement("li")
 				  , email = document.createElement("div")
+				  , perms = document.createElement("div")
+				  , perm1 = document.createElement("input")
+				  , perm2 = document.createElement("input")
+				  , perm3 = document.createElement("input")
+				  , perl1 = document.createElement("label")
+				  , perl2 = document.createElement("label")
+				  , perl3 = document.createElement("label")
 				  , nav   = document.createElement("nav")
 				  , ul    = document.createElement("ul")
 				  , li1   = document.createElement("li")
@@ -343,6 +350,27 @@ function createUser(formEl) {
 				email.className = "email";
 				email.appendChild(document.createTextNode(res["email"]));
 				user.appendChild(email);
+
+				perm1.type = "checkbox";
+				perm1.onchange = function () { setPermission(res["id"], "can_own_workers", this); };
+				perl1.appendChild(perm1);
+				perl1.appendChild(document.createTextNode(" Can own workers"));
+				perms.appendChild(perl1);
+
+				perm2.type = "checkbox";
+				perm2.onchange = function () { setPermission(res["id"], "can_own_users", this); };
+				perl2.appendChild(perm2);
+				perl2.appendChild(document.createTextNode(" Can own users"));
+				perms.appendChild(perl2);
+
+				perm3.type = "checkbox";
+				perm3.onchange = function () { setPermission(res["id"], "is_admin", this); };
+				perl3.appendChild(perm3);
+				perl3.appendChild(document.createTextNode(" Is admin"));
+				perms.appendChild(perl3);
+
+				perms.className = "permissions";
+				user.appendChild(perms);
 
 				a1.href = "/user/" + res["id"] + "/login";
 				a1.appendChild(document.createTextNode("log in"));
