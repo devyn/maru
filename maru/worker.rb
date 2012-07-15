@@ -320,7 +320,7 @@ EXAMPLE
 				end
 
 				opts.on_tail "-v", "--version", "Print version information" do
-					puts "maru #{Maru::VERSION} - https://github.com/devyn/maru/"
+					puts "maru worker #{Maru::VERSION} (https://github.com/devyn/maru/)"
 					exit
 				end
 			end.parse! ARGV

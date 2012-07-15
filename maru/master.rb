@@ -7,6 +7,7 @@ require 'erubis'
 require 'rdiscount'
 require 'eventmachine'
 
+require_relative 'version'
 require_relative 'plugin'
 require_relative 'log'
 
@@ -331,6 +332,8 @@ class Maru::Master < Sinatra::Base
 					s.send_keepalive rescue next
 				end
 			end
+
+			Log.info "maru master #{Maru::VERSION} (https://github.com/devyn/maru/) fired up and ready to go."
 		end
 	end
 
