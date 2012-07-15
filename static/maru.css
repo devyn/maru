@@ -386,6 +386,11 @@ a:hover {
 	border-top-right-radius: 10px;
 
 	background-color: #903030;
+
+	background-image: -webkit-linear-gradient(top, #903030, #802020, #903030);
+	background-image: -moz-linear-gradient(top, #903030, #802020, #903030);
+	background-image: -ms-linear-gradient(top, #903030, #802020, #903030);
+	background-image: -o-linear-gradient(top, #903030, #802020, #903030);
 }
 
 .group .info .delete span {
@@ -394,6 +399,11 @@ a:hover {
 
 .group .info .pause {
 	background-color: #4090d0;
+
+	background-image: -webkit-linear-gradient(top, #4090d0, #3080c0, #4090d0);
+	background-image: -moz-linear-gradient(top, #4090d0, #3080c0, #4090d0);
+	background-image: -ms-linear-gradient(top, #4090d0, #3080c0, #4090d0);
+	background-image: -o-linear-gradient(top, #4090d0, #3080c0, #4090d0);
 }
 
 .group .info .pause span {
@@ -402,6 +412,11 @@ a:hover {
 
 .group .info .resume {
 	background-color: #d09040;
+
+	background-image: -webkit-linear-gradient(top, #d09040, #c08030, #d09040);
+	background-image: -moz-linear-gradient(top, #d09040, #c08030, #d09040);
+	background-image: -ms-linear-gradient(top, #d09040, #c08030, #d09040);
+	background-image: -o-linear-gradient(top, #d09040, #c08030, #d09040);
 }
 
 .group .info .resume span {
