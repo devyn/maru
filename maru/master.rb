@@ -468,6 +468,7 @@ class Maru::Master < Sinatra::Base
 	get '/admin' do
 		must_be_admin!
 
+		@title = "admin"
 		@users = User.all
 
 		erb :admin
@@ -663,6 +664,8 @@ class Maru::Master < Sinatra::Base
 
 	get '/group/new' do
 		must_be_able_to_own_groups!
+
+		@title = "submit work"
 
 		erb :group_new
 	end
