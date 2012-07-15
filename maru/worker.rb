@@ -5,6 +5,7 @@ require 'rest_client'
 require 'fileutils'
 require 'openssl'
 
+require_relative 'version'
 require_relative 'plugin'
 require_relative 'log'
 
@@ -264,16 +265,10 @@ module Maru
 
 			options = {}
 			OptionParser.new do |opts|
-				opts.banner = "Usage: #{File.basename( $0 )} [options]"
-
-				opts.on "-m", "--master URL", "Add master" do |url|
-					options[:masters] ||= []
-					options[:masters] << url
-				end
-
-				opts.on "-k", "--kinds x,y,z", "Specify list of acceptable job types" do |kinds|
-					options[:kinds] = kinds.split( ',' )
-				end
+				opts.banner = <<-USAGE
+Usage: #$0 -c worker-config.yaml [options]
+       #$0 {--config-example|--help|--version}
+USAGE
 
 				opts.on "-t", "--temp-dir DIR", "Specify directory to use for temporary files. Default: /tmp/maru.<PID>" do |temp_dir|
 					options[:temp_dir] = temp_dir
@@ -305,8 +300,27 @@ module Maru
 					end
 				end
 
+				opts.on_tail "--config-example", "Print out a template configuration file" do
+					puts <<-EXAMPLE
+name: Skynet-CPU9001
+masters:
+- url: https://compute.example.com/
+  key: t912jpgz9tm40drqqr73lhrh
+plugins:
+- /path/to/plugin.rb
+wait_time: 60
+group_expiry: 3600
+EXAMPLE
+					exit
+				end
+
 				opts.on_tail "-h", "--help", "Show this message" do
 					puts opts
+					exit
+				end
+
+				opts.on_tail "-v", "--version", "Print version information" do
+					puts "maru #{Maru::VERSION} - https://github.com/devyn/maru/"
 					exit
 				end
 			end.parse! ARGV
