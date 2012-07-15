@@ -99,6 +99,10 @@ module Maru
 			args
 		end
 
+		def log
+			Maru::Log
+		end
+
 		class GroupFormBuilder
 			attr_reader :html, :restrictions
 
