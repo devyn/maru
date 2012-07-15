@@ -8,6 +8,7 @@ require 'rdiscount'
 require 'eventmachine'
 
 require_relative 'plugin'
+require_relative 'log'
 
 class Numeric
 	def humanize_seconds
@@ -146,8 +147,8 @@ class Maru::Master < Sinatra::Base
 
 		timestamps :created_at
 
-		def to_color base=37
-			"\e[1;31m##{self.id} \e[0;#{base}m(\e[1;36m#{self.name}\e[0;#{base}m)\e[0m"
+		def to_s
+			"##{self.id} (#{self.name})"
 		end
 
 		def estimated_time_left
@@ -185,8 +186,8 @@ class Maru::Master < Sinatra::Base
 		property :assigned_at,   DateTime
 		property :completed_at,  DateTime
 
-		def to_color base=37
-			"\e[1;35m##{self.id} \e[0;#{base}m(\e[1;36m#{self.group.name} \e[0;#{base}m/ \e[36m#{self.name}\e[#{base}m)\e[0m"
+		def to_s
+			"##{self.id} (#{self.group.name} / #{self.name})"
 		end
 	end
 
@@ -205,8 +206,8 @@ class Maru::Master < Sinatra::Base
 		# Session revocation
 		property :invalid_before, DateTime, :required => true, :default => proc { Time.now }
 
-		def to_color base=37
-			"\e[33m#{self.name}\e[0m"
+		def to_s
+			self.name
 		end
 	end
 
@@ -240,8 +241,8 @@ class Maru::Master < Sinatra::Base
 			OpenSSL::HMAC.hexdigest( OpenSSL::Digest::SHA256.new, self.password_salt, pass ) == self.password_hash
 		end
 
-		def to_color base=37
-			"\e[32m#{email}\e[0m"
+		def to_s
+			email
 		end
 	end
 
@@ -316,7 +317,7 @@ class Maru::Master < Sinatra::Base
 				begin
 					Job.all( :worker.not => nil, :completed_at => nil ).each do |job|
 						if Time.now - job.assigned_at.to_time > job.expiry
-							Kernel.warn "\e[1m>\e[0m Reaping #{job.to_color} (expired)"
+							Log.info "#{job} has expired. Reaping."
 							job.update :worker => nil
 						end
 					end
@@ -825,7 +826,7 @@ class Maru::Master < Sinatra::Base
 		else
 			job.update :worker => worker, :assigned_at => Time.now
 
-			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;33massigned to \e[0m#{worker.to_color}"
+			Log.info "Job #{job} assigned to #{worker}"
 
 			EM.next_tick { update_group_status job.group }
 
@@ -861,7 +862,7 @@ class Maru::Master < Sinatra::Base
 							end
 						else
 							# discard it with a warning
-							warn "> Warning: result discarded because filestore is unable to store it"
+							Log.warn "#{job}: result discarded because filestore is unable to store it"
 						end
 					ensure
 						file["data"][:tempfile].close
@@ -888,15 +889,16 @@ class Maru::Master < Sinatra::Base
 
 				group.save
 
-				warn "\e[1m> \e[0mJob #{job.to_color} \e[1;32mcompleted by \e[0m#{worker.to_color}"
+				Log.info "Job #{job} completed by #{worker}"
 
 				EM.next_tick { update_group_status job.group }
 
 				JSON.dump( :success => true, :result_url => result_url )
 			end
 		rescue Exception
-			warn "\e[1m> \e[0;31mError in completion of ##{params[:id]}: #{$1.class.name}: #$!\e[0m"
-			$!.backtrace.each { |x| warn "    #{x}" }
+			Log.error "In completion of job ##{params[:id]}" do
+				Log.exception $!
+			end
 
 			halt 500, JSON.dump( :error => $!.to_s )
 		end
@@ -914,7 +916,7 @@ class Maru::Master < Sinatra::Base
 		else
 			job.update :worker => nil, :assigned_at => nil
 
-			warn "\e[1m> \e[0mJob #{job.to_color} \e[1;31mforfeited by \e[0m#{worker.to_color}"
+			Log.warn "Job #{job} forfeited by #{worker}"
 
 			EM.next_tick { update_group_status job.group }
 

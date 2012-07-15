@@ -6,6 +6,7 @@ require 'fileutils'
 require 'openssl'
 
 require_relative 'plugin'
+require_relative 'log'
 
 module Maru
 	class MasterLink
@@ -27,10 +28,10 @@ module Maru
 			@resource.options[:headers]         ||= {}
 			@resource.options[:headers]["Cookie"] = cookie(result.cookies)
 
-			warn "\e[1m> \e[0;34mAuthenticated with \e[35m#{@resource}\e[0m"
+			Log.info "Authenticated with #@resource"
 			true
 		rescue RestClient::Forbidden
-			warn "\e[1m> \e[0;35m#{@resource}\e[31m refused our credentials\e[0m"
+			Log.info "#@resource refused our credentials"
 			false
 		end
 
@@ -128,31 +129,29 @@ module Maru
 					got_work = true
 
 					begin
-						puts "\e[1m> #{format_job job, m} \e[1;33mprocessing\e[0m"
-						with_group job["group"], m do
-							process_job job, m
+						Log.info "#{format_job job, m} processing" do
+							with_group job["group"], m do
+								process_job job, m
+							end
 						end
+						Log.info "#{format_job job, m} completed"
 					rescue Exception
-						puts "\e[1m> #{format_job job, m} \e[1;31mforfeiting:\e[0m #$! at #{$!.backtrace.first}"
+						Log.warn "#{format_job job, m} forfeiting: #$!"
 						m.forfeit_job job["id"]
 
-						puts "\e[1m> \e[0;34mBlacklisting #{m.uri.host}##{job["id"]}.\e[0m"
+						Log.warn "Blacklisting #{m.uri.host}##{job["id"]}"
 						@blacklist[m] ||= []
 						@blacklist[m] << job["id"]
 
 						raise $!
 					end
 				rescue Errno::ECONNREFUSED
-					warn "\e[1m> \e[0;33mWarning: \e[35m#{m}\e[33m may be down.\e[0m"
+					Log.warn "Can not connect to #{m}"
 				rescue Maru::MasterLink::NoJobsAvailable
 				rescue SystemExit
 					raise $!
 				rescue Exception
-					warn "\e[1m> \e[0;31mUnhandled exception:\e[0m"
-					warn "  #{$!.class.name}: #{$!.message}"
-					$!.backtrace.each do |b|
-						warn "    #{b}"
-					end
+					Log.exception $!
 				end
 
 				passed << @robin
@@ -194,7 +193,7 @@ module Maru
 
 				files = plugin.process_job( job ).map { |f| {"name" => f, "data" => File.new( f ), "sha256" => OpenSSL::Digest::SHA256.file( f ).hexdigest} }
 
-				puts "\e[1m  > \e[0;34mUploading results...\e[0m"
+				Log.info "Uploading results..."
 
 				master.complete_job job["id"], :files => files
 
@@ -205,13 +204,11 @@ module Maru
 				job["prerequisites"].each do |pre|
 					File.unlink(pre["destination"]) if verify_path(pre["destination"]) and File.file? pre["destination"]
 				end if job["prerequisites"]
-
-				puts "\e[1m> #{format_job job, master} \e[1;32mdone\e[0m"
 			end
 		end
 
 		def format_job job, master
-			"\e[1m#{master.uri.host}##{job["id"]} (\e[36m#{job["group"]["name"]}\e[0;1m / \e[0;36m#{job["name"]}\e[0;1m - \e[0;32m#{job["group"]["user"]["email"]}\e[0;1m)\e[0m"
+			"#{master.uri.host}##{job["id"]} (#{job["group"]["name"]} / #{job["name"]} - #{job["group"]["user"]["email"]})"
 		end
 
 		def with_group group, master
@@ -233,7 +230,7 @@ module Maru
 				return if check_consistency pre["destination"], pre["sha256"]
 			end
 
-			puts "\e[1m  > \e[0;34mDownloading #{pre["destination"]} from #{pre["source"]}...\e[0m"
+			Log.info "Downloading #{pre["destination"]} from #{pre["source"]}..."
 
 			RestClient::Resource.new( pre["source"], :raw_response => true ).get do |response,request,result,&block|
 				if response.code == 200
@@ -251,7 +248,7 @@ module Maru
 		end
 
 		def check_consistency path, sha256
-			puts "\e[1m  > \e[0;34mChecking #{path} for consistency...\e[0m"
+			Log.info "Checking #{path} for consistency..."
 
 			sha256 == OpenSSL::Digest::SHA256.file( path ).hexdigest
 		end
@@ -320,9 +317,9 @@ module Maru
 			trap( :TERM ) { exit }
 
 			at_exit do
-				warn "\e[1m> \e[0;34mWaiting for child processes...\e[0m"
+				Log.info "Waiting for child processes..."
 				Process.waitall
-				warn "\e[1m> \e[0;34mCleaning up...\e[0m"
+				Log.info "Cleaning up..."
 				unless options[:keep_temp]
 					FileUtils.rm_rf w.temp_dir
 				end
@@ -333,12 +330,11 @@ module Maru
 					w.cleanup
 					w.work
 				rescue Maru::Worker::NothingToDo
-					puts "\e[1m> \e[0;34mNothing to do. Waiting #{options[:wait_time] || 30} seconds.\e[0m"
 					sleep options[:wait_time] || 30
 				rescue SystemExit
 					raise $!
 				rescue Exception
-					#warn "\e[1m! \e[31m#{$!.class.name}: \e[0m#{$!.message}"
+					Log.exception $!
 				end
 			end
 		end
