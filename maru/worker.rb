@@ -192,15 +192,17 @@ module Maru
 					download_prerequisite pre
 				end if job["prerequisites"]
 
-				files = plugin.process_job( job ).map { |f| {"name" => f, "data" => File.new( f ), "sha256" => OpenSSL::Digest::SHA256.file( f ).hexdigest} }
+				result = Maru::Plugin::JobResultBuilder.new
+
+				plugin.process_job( job, result )
 
 				Log.info "Uploading results..."
 
-				master.complete_job job["id"], :files => files
+				master.complete_job job["id"], result.to_params
 
-				files.each do |f|
-					File.unlink(f["name"])
-				end
+				Log.info "Cleaning up..."
+
+				result.cleanup
 
 				job["prerequisites"].each do |pre|
 					File.unlink(pre["destination"]) if verify_path(pre["destination"]) and File.file? pre["destination"]

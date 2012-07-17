@@ -67,9 +67,7 @@ module Maru
 				if job.nil?
 					halt 404, JSON.dump( :error => "job not found" )
 				else
-					params[:files] = [params[:files]] if params[:files].is_a? Hash
-
-					params[:files].each do |file|
+					params[:files].each do |index, file|
 						begin
 							if settings.filestore.respond_to? :store_result
 								file["data"][:tempfile].rewind
@@ -87,7 +85,7 @@ module Maru
 						ensure
 							file["data"][:tempfile].close
 						end
-					end unless params[:files].nil?
+					end if params[:files]
 
 					job.update :completed_at => Time.now
 

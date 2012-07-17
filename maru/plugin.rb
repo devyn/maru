@@ -93,12 +93,6 @@ module Maru
 			end
 		end
 
-		def files *args
-			# For now, it's just an array. In the future, we may include
-			# a way to upload things other than files.
-			args
-		end
-
 		def log
 			Maru::Log
 		end
@@ -416,6 +410,28 @@ module Maru
 				end
 
 				alias to_s message
+			end
+		end
+
+		class JobResultBuilder
+			def initialize
+				@files = []
+			end
+
+			def files *files
+				files.each do |file|
+					@files << {:name => file, :data => File.new( file ), :sha256 => OpenSSL::Digest::SHA256.file( file ).hexdigest}
+				end
+			end
+
+			def cleanup
+				@files.each do |file|
+					File.unlink file[:name] rescue nil
+				end
+			end
+
+			def to_params
+				{:files => Hash[@files.map.with_index {|v,k| [k,v]}]}
 			end
 		end
 	end
