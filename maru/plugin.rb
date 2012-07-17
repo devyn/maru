@@ -20,6 +20,23 @@ class Module
 	end
 end
 
+class String
+	def numeric?
+		!!(gsub(' ','') =~ /^-?[0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?$/)
+	end
+
+	def integer?
+		!!(gsub(' ','') =~ /^-?[0-9]+$/)
+	end
+
+	def url?
+		URI.parse(self)
+		true
+	rescue
+		false
+	end
+end
+
 module Maru
 	module Plugin
 		PLUGINS = []
@@ -48,33 +65,69 @@ module Maru
 			f.restrictions.each do |restriction|
 				target = find_name_in(params, restriction[:name]) if restriction[:name]
 
-				if restriction[:empty] == false and !(empty = target.to_s.strip.empty?)
-					errors << "#{restriction[:label] || restriction[:name]} is required."
-				elsif restriction[:empty] == true and empty
-					errors << "#{restriction[:label] || restriction[:name]} must be empty."
+				friendly_name = restriction[:label] || restriction[:name]
+
+				if restriction[:empty] == false and (empty = target.to_s.strip.empty?)
+					errors << "#{friendly_name} is required."
+					next
+				elsif restriction[:empty] == true and !empty
+					errors << "#{friendly_name} must be empty."
+					next
+				end
+
+				if restriction[:min_items] and (target.nil? or target.size < restriction[:min_items])
+					errors << "Not enough #{(restriction[:label] || restriction[:name]).downcase}."
+					next
+				end
+
+				if restriction[:max_items] and !target.nil? and target.size > restriction[:max_items]
+					errors << "Too many #{(restriction[:label] || restriction[:name]).downcase}."
+					next
 				end
 
 				case restriction[:verify]
 				when "number"
-					# TODO
+					if not target.to_s.numeric?
+						errors << "#{friendly_name} must be numeric."
+					end
 				when "numbers"
-					# TODO
+					if not target.values.all? &:numeric?
+						errors << "#{friendly_name} must contain only numbers."
+					end
 				when "integer"
-					# TODO
+					if not target.to_s.integer?
+						errors << "#{friendly_name} must be an integer."
+					end
 				when "integers"
-					# TODO
+					if not target.values.all? &:integer?
+						errors << "#{friendly_name} must contain only integers."
+					end
 				when "url"
-					# TODO
+					if target.to_s.url?
+						if restriction[:schemes] and not restriction[:schemes].include? URI.parse(target).scheme.downcase
+							supported_schemes = if restriction[:schemes].size == 1
+								restriction[:schemes][0].upcase
+							else
+								restriction[:schemes][0..-2].map(&:upcase).join(", ") + "or " + restriction[:schemes][-1].upcase
+							end
+							errors << "#{friendly_name} must be a(n) #{supported_schemes} URL."
+						end
+					else
+						errors << "#{friendly_name} must be a URL."
+					end
 				when "urls"
-					# TODO
-				end
-
-				if restriction[:min_items] and target.is_a? Array and target.size < restriction[:min_items]
-					errors << "Not enough #{(restriction[:label] || restriction[:name]).downcase}."
-				end
-
-				if restriction[:max_items] and target.is_a? Array and target.size > restriction[:max_items]
-					errors << "Too many #{(restriction[:label] || restriction[:name]).downcase}."
+					if target.values.all? &:url?
+						if restriction[:schemes] and not target.values.all? { |u| restriction[:schemes].include? URI.parse(u).scheme.downcase }
+							supported_schemes = if restriction[:schemes].size == 1
+								restriction[:schemes][0].upcase
+							else
+								restriction[:schemes][0..-2].map(&:upcase).join(", ") + "and " + restriction[:schemes][-1].upcase
+							end
+							errors << "#{friendly_name} must contain only #{supported_schemes} URLs."
+						end
+					else
+						errors << "#{friendly_name} must contain only URLs."
+					end
 				end
 			end
 
@@ -82,11 +135,11 @@ module Maru
 		end
 
 		def find_name_in(params, name)
-			if md = name.match(/^\[?([A-Za-z0-9_.-]+)\]/)
+			if md = name.match(/^\[?([A-Za-z0-9_.-]+)\]?/)
 				if md.post_match.strip.empty?
-					params[params.is_a?(Array) ? md[1].to_i : md[1]]
+					params[md[1]]
 				else
-					find_name_in params[params.is_a?(Array) ? md[1].to_i : md[1]], md.post_match
+					find_name_in params[md[1]], md.post_match
 				end
 			else
 				nil
