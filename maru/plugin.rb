@@ -87,19 +87,51 @@ module Maru
 
 				case restriction[:verify]
 				when "number"
-					if not target.to_s.numeric?
+					if target.to_s.numeric?
+						if restriction[:min] and target.to_f < restriction[:min]
+							errors << "#{friendly_name} must be at least #{restriction[:min]}."
+						end
+
+						if restriction[:max] and target.to_f > restriction[:max]
+							errors << "#{friendly_name} must be at most #{restriction[:max]}."
+						end
+					else
 						errors << "#{friendly_name} must be numeric."
 					end
 				when "numbers"
-					if not target.values.all? &:numeric?
+					if target.values.all? &:numeric?
+						if restriction[:min] and target.to_a.any? { |x| x.to_f < restriction[:min] }
+							errors << "#{friendly_name} must contain numbers of at least #{restriction[:min]}."
+						end
+
+						if restriction[:max] and target.to_a.any? { |x| x.to_f > restriction[:max] }
+							errors << "#{friendly_name} must contain numbers of at most #{restriction[:max]}."
+						end
+					else
 						errors << "#{friendly_name} must contain only numbers."
 					end
 				when "integer"
-					if not target.to_s.integer?
+					if target.to_s.integer?
+						if restriction[:min] and target.to_i < restriction[:min]
+							errors << "#{friendly_name} must be at least #{restriction[:min]}."
+						end
+
+						if restriction[:max] and target.to_i > restriction[:max]
+							errors << "#{friendly_name} must be at most #{restriction[:max]}."
+						end
+					else
 						errors << "#{friendly_name} must be an integer."
 					end
 				when "integers"
-					if not target.values.all? &:integer?
+					if target.values.all? &:integer?
+						if restriction[:min] and target.to_a.any? { |x| x.to_i < restriction[:min] }
+							errors << "#{friendly_name} must contain integers of at least #{restriction[:min]}."
+						end
+
+						if restriction[:max] and target.to_a.any? { |x| x.to_i > restriction[:max] }
+							errors << "#{friendly_name} must contain integers of at most #{restriction[:max]}."
+						end
+					else
 						errors << "#{friendly_name} must contain only integers."
 					end
 				when "url"
