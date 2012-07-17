@@ -136,51 +136,148 @@ function longPollGroups() {
 
 function processSubMessage(message) {
 	if (message.type === "groupStatus") {
-		var groupEl      = document.getElementById("group-" + message.groupID)
-		  , completeEl   = groupEl.querySelector(".progress .complete")
-		  , processingEl = groupEl.querySelector(".progress .processing")
+		processGroupStatusMessage(message);
+	} else if (message.type === "groupCreate") {
+		processGroupCreateMessage(message);
+	} else if (message.type === "groupDelete") {
+		processGroupDeleteMessage(message);
+	}
+}
+
+function processGroupStatusMessage(message) {
+	var groupEl      = document.getElementById("group-" + message.groupID)
+	  , completeEl   = groupEl.querySelector(".progress .complete")
+	  , processingEl = groupEl.querySelector(".progress .processing")
+	  ;
+
+	if (message.paused && !groupEl.className.match(/paused/)) {
+		groupEl.className += ' paused';
+	} else if (!message.paused && groupEl.className.match(/paused/)) {
+		groupEl.className = groupEl.className.replace(/ *paused/, '');
+	}
+
+	completeEl.style.width = (message.complete/message.total*100).toString() + "%";
+	processingEl.style.width = (message.processing.length/message.total*100).toString() + "%";
+
+	if (groupEl.className.match(/\bselected\b/i)) {
+		var details     = document.querySelector("#details")
+		  , nComplete   = details.querySelector("#status .complete")
+		  , nProcessing = details.querySelector("#status .processing")
+		  , nRemaining  = details.querySelector("#status .remaining")
+		  , eTimeLeft   = details.querySelector("#status .estimated-time-left")
+		  , lProcessing = details.querySelector("#processing-jobs tbody")
 		  ;
 
-		if (message.paused && !groupEl.className.match(/paused/)) {
-			groupEl.className += ' paused';
-		} else if (!message.paused && groupEl.className.match(/paused/)) {
-			groupEl.className = groupEl.className.replace(/ *paused/, '');
-		}
+		nComplete.textContent   = message.complete;
+		nProcessing.textContent = message.processing.length;
+		nRemaining.textContent  = message.total - message.complete - message.processing.length;
+		eTimeLeft.textContent   = message.estimatedTimeLeft;
 
-		completeEl.style.width = (message.complete/message.total*100).toString() + "%";
-		processingEl.style.width = (message.processing.length/message.total*100).toString() + "%";
+		while (lProcessing.hasChildNodes()) lProcessing.removeChild(lProcessing.lastChild);
 
-		if (groupEl.className.match(/\bselected\b/i)) {
-			var details     = document.querySelector("#details")
-			  , nComplete   = details.querySelector("#status .complete")
-			  , nProcessing = details.querySelector("#status .processing")
-			  , nRemaining  = details.querySelector("#status .remaining")
-				, eTimeLeft   = details.querySelector("#status .estimated-time-left")
-			  , lProcessing = details.querySelector("#processing-jobs tbody")
+		for (var i = 0; i < message.processing.length; i++) {
+			var tr       = document.createElement("tr")
+			  , tdName   = document.createElement("td")
+			  , tdWorker = document.createElement("td")
 			  ;
 
-			nComplete.textContent   = message.complete;
-			nProcessing.textContent = message.processing.length;
-			nRemaining.textContent  = message.total - message.complete - message.processing.length;
-			eTimeLeft.textContent   = message.estimatedTimeLeft;
+			tdName.appendChild(document.createTextNode(message.processing[i].name));
+			tr.appendChild(tdName);
 
-			while (lProcessing.hasChildNodes()) lProcessing.removeChild(lProcessing.lastChild);
+			tdWorker.appendChild(document.createTextNode(message.processing[i].worker));
+			tr.appendChild(tdWorker);
 
-			for (var i = 0; i < message.processing.length; i++) {
-				var tr       = document.createElement("tr")
-				  , tdName   = document.createElement("td")
-				  , tdWorker = document.createElement("td")
-				  ;
-
-				tdName.appendChild(document.createTextNode(message.processing[i].name));
-				tr.appendChild(tdName);
-
-				tdWorker.appendChild(document.createTextNode(message.processing[i].worker));
-				tr.appendChild(tdWorker);
-
-				lProcessing.appendChild(tr);
-			}
+			lProcessing.appendChild(tr);
 		}
+	}
+}
+
+function processGroupCreateMessage(message) {
+	var groupEl = document.createElement("li");
+
+	groupEl.id = 'group-' + message.groupID;
+	groupEl.className = 'group' + (message.paused ? ' paused' : '') + (message.own ? ' own' : '');
+
+	var infoPart = document.createElement("div");
+
+	infoPart.className = "info-part";
+	infoPart.onclick = function () { selectGroup(this.parentNode); };
+
+	var progress   = document.createElement("div")
+	  , complete   = document.createElement("div")
+	  , processing = document.createElement("div")
+	  ;
+
+	progress.className = "progress";
+
+	complete.style.width = "0";
+	progress.appendChild(complete);
+
+	processing.style.width = "0";
+	progress.appendChild(processing);
+
+	infoPart.appendChild(progress);
+
+	var info  = document.createElement("div")
+	  , name  = document.createElement("div")
+	  , owner = document.createElement("div")
+	  ;
+
+	info.className = "info";
+
+	name.className = "name";
+	name.appendChild(document.createTextNode(message.name));
+	info.appendChild(name);
+
+	owner.className = "owner";
+	owner.appendChild(document.createTextNode(message.owner));
+	info.appendChild(owner);
+
+	infoPart.appendChild(info);
+
+	groupEl.appendChild(infoPart);
+
+	if (message.own) {
+		var actionPart = document.createElement("div")
+		  , actions    = document.createElement("div")
+		  ;
+
+		actionPart.className = "action-part";
+
+		var buttons = ["delete", "pause", "resume"];
+
+		for (var i = 0; i < buttons.length; i++) {
+			var buttonO = document.createElement("div")
+			  , buttonI = document.createElement("span")
+			  ;
+
+			buttonO.className = buttons[i];
+			buttonO.appendChild(buttonI);
+
+			if (buttons[i] === "delete") {
+				buttonO.onclick = function () { deleteGroup(message.groupID); };
+			} else if (buttons[i] === "pause") {
+				buttonO.onclick = function () { pauseGroup(message.groupID); };
+			} else if (buttons[i] === "resume") {
+				buttonO.onclick = function () { resumeGroup(message.groupID); };
+			}
+
+			actions.appendChild(buttonO);
+		}
+
+		actionPart.appendChild(actions);
+
+		groupEl.appendChild(actionPart);
+	}
+
+	document.getElementById("groups").appendChild(groupEl);
+}
+
+function processGroupDeleteMessage(message) {
+	var groupEl = document.getElementById('group-' + message.groupID);
+
+	if (groupEl) {
+		groupEl.parentNode.removeChild(groupEl);
 	}
 }
 

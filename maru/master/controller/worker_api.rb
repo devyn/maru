@@ -48,7 +48,7 @@ module Maru
 
 				Log.info "Job #{job} assigned to #{worker}"
 
-				EM.next_tick { update_group_status job.group }
+				update_group_status job.group
 
 				%{{"job":#{job.to_json( :exclude => [:worker_id, :user_id], :relationships => {:group => {:relationships => {:user => {:only => [:email]}}}} )}}}
 			end
@@ -109,7 +109,7 @@ module Maru
 
 					Log.info "Job #{job} completed by #{worker}"
 
-					EM.next_tick { update_group_status job.group }
+					update_group_status job.group
 
 					JSON.dump( :success => true, :result_url => result_url )
 				end
@@ -136,7 +136,7 @@ module Maru
 
 				Log.warn "Job #{job} forfeited by #{worker}"
 
-				EM.next_tick { update_group_status job.group }
+				update_group_status job.group
 
 				JSON.dump( :success => true )
 			end

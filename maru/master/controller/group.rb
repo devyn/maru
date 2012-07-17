@@ -45,6 +45,8 @@ module Maru
 			plugin.build_group(group_builder, params)
 
 			if group_builder.save
+				notify_group_creation group
+
 				redirect to('/')
 			else
 				@error = group.errors.full_messages.map { |e| "- #{e}" }.join("\n")
@@ -106,6 +108,8 @@ module Maru
 				if settings.filestore.respond_to? :clean
 					settings.filestore.clean @group
 				end
+
+				notify_group_deletion @group
 
 				halt 204
 			else

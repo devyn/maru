@@ -40,14 +40,39 @@ module Maru
 			end
 
 			def update_group_status(group)
-				complete   = group.jobs( :completed_at.not => nil ).length
-				processing = group.jobs( :worker.not => nil, :completed_at => nil ).map { |job| {:name => job.name, :worker => job.worker.name} }
-				total      = group.jobs.length
+				EM.next_tick do
+					complete   = group.jobs( :completed_at.not => nil ).length
+					processing = group.jobs( :worker.not => nil, :completed_at => nil ).map { |job| {:name => job.name, :worker => job.worker.name} }
+					total      = group.jobs.length
 
-				settings.group_subscribers.each do |socket|
-					next if !group.public and not (socket.user == group.user or socket.user.is_admin)
+					settings.group_subscribers.each do |socket|
+						next if !group.public and !socket.user
+						next if !group.public and not (socket.user == group.user or socket.user.is_admin)
 
-					socket.send( { type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total, estimatedTimeLeft: group.estimated_time_left, paused: group.paused }.to_json )
+						socket.send( { type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total, estimatedTimeLeft: group.estimated_time_left, paused: group.paused }.to_json )
+					end
+				end
+			end
+
+			def notify_group_creation(group)
+				EM.next_tick do
+					settings.group_subscribers.each do |socket|
+						next if !group.public and !socket.user
+						next if !group.public and not (socket.user == group.user or socket.user.is_admin)
+
+						socket.send( { type: "groupCreate", groupID: group.id, name: group.name, owner: group.user.email, paused: group.paused, own: (socket.user == group.user or socket.user.is_admin) }.to_json );
+					end
+				end
+			end
+
+			def notify_group_deletion(group)
+				EM.next_tick do
+					settings.group_subscribers.each do |socket|
+						next if !group.public and !socket.user
+						next if !group.public and not (socket.user == group.user or socket.user.is_admin)
+
+						socket.send( { type: "groupDelete", groupID: group.id }.to_json )
+					end
 				end
 			end
 		end
