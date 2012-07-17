@@ -540,7 +540,7 @@ a:hover {
 	margin-bottom: 20px;
 }
 
-.single-pane input:not([type="submit"]):not([type="checkbox"]) {
+.single-pane input:not([type]), .single-pane input[type="password"] {
 	width: 300px;
 	padding: 4px;
 	font-size: 12px;

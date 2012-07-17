@@ -511,10 +511,57 @@ function setGroupNewFormKind(kind) {
 }
 
 function restrictGroupNewForm(restrictions) {
-	console.log(restrictions);
+	for (var i = 0; i < restrictions.length; i++) {
+	}
 }
 
-function verifyGroupNewFormRestrictions(restrictions) {
+function validateGroupNewForm(flash) {
+}
+
+function addToGroupNewFormList(triggerEl) {
+	var list = triggerEl.parentNode.parentNode;
+
+	var li     = document.createElement("li")
+	  , input  = document.createElement("input")
+	  , remove = document.createElement("a")
+	  ;
+
+	if (list.className.match(/passwords/)) {
+		input.type = "password";
+	} else if (list.className.match(/files/)) {
+		input.type = "file";
+	}
+
+	var md = list.className.match(/(string|file|password|url|number|integer)s/);
+
+	if (md) {
+		input.className = md[1];
+	}
+
+	var last = triggerEl.parentNode.previousSibling;
+
+	if (last) {
+		input.name = last.getElementsByTagName("input")[0].name.replace(/\[(\d+)\]$/, function (_, n) { return '[' + (parseInt(n,10)+1) + ']'; });
+	} else {
+		input.name = list.id.replace(/^field-/, '').replace(/-([^-]*)/g, '[$1]') + '[0]';
+	}
+
+	input.id = 'field-' + input.name.replace(/\[([^\]]*)\]/g, '-$1');
+
+	remove.onclick = function () { removeFromGroupNewFormList(this) };
+
+	remove.appendChild(document.createTextNode("remove"));
+
+	li.appendChild(input);
+	li.appendChild(document.createTextNode(" "));
+	li.appendChild(remove);
+
+	list.insertBefore(li, triggerEl.parentNode);
+}
+
+function removeFromGroupNewFormList(triggerEl) {
+	// NOTE: this will leave gaps in the indices, but it shouldn't matter.
+	triggerEl.parentNode.parentNode.removeChild(triggerEl.parentNode);
 }
 
 window.addEventListener('load', function () {

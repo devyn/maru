@@ -135,13 +135,15 @@ module Maru
 					@stack.push name
 
 					options[:min_items].times do |x|
-						@html << %'<li><input id="#{cat_id(x)}" class="#{options[:el_class] || "string"}" name="#{cat_name(x)}"#{%' type="#{options[:el_type]}"' if options[:el_type]}/></li>'
+						@html << %'<li><input id="#{cat_id(x)}" class="#{options[:el_class] || "string"}" name="#{cat_name(x)}"#{%' type="#{options[:el_type]}"' if options[:el_type]}/> <a onclick="removeFromGroupNewFormList(this);">remove</a></li>'
 					end
 
 					@stack.pop
 
 					@restrictions << {label: options[:label], name: cat_name(name), min_items: options[:min_items]}
 				end
+
+				@html << %'<li class="add-to-list"><a onclick="addToGroupNewFormList(this);">add</a></li>'
 
 				if options[:max_items]
 					@restrictions << {label: options[:label], name: cat_name(name), max_items: options[:max_items]}
