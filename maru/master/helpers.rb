@@ -47,7 +47,7 @@ module Maru
 				settings.group_subscribers.each do |socket|
 					next if !group.public and not (socket.user == group.user or socket.user.is_admin)
 
-					socket.send( { type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total, estimatedTimeLeft: group.estimated_time_left }.to_json )
+					socket.send( { type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total, estimatedTimeLeft: group.estimated_time_left, paused: group.paused }.to_json )
 				end
 			end
 		end

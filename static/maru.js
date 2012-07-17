@@ -141,6 +141,12 @@ function processSubMessage(message) {
 		  , processingEl = groupEl.querySelector(".progress .processing")
 		  ;
 
+		if (message.paused && !groupEl.className.match(/paused/)) {
+			groupEl.className += ' paused';
+		} else if (!message.paused && groupEl.className.match(/paused/)) {
+			groupEl.className = groupEl.className.replace(/ *paused/, '');
+		}
+
 		completeEl.style.width = (message.complete/message.total*100).toString() + "%";
 		processingEl.style.width = (message.processing.length/message.total*100).toString() + "%";
 

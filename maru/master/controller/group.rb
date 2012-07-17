@@ -75,6 +75,7 @@ module Maru
 			halt 403 unless @group.user == @user or @user.is_admin
 
 			if @group.update :paused => true
+				update_group_status @group
 				halt 204
 			else
 				halt 500
@@ -88,6 +89,7 @@ module Maru
 			halt 403 unless @group.user == @user or @user.is_admin
 
 			if @group.update :paused => false
+				update_group_status @group
 				halt 204
 			else
 				halt 500
