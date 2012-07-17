@@ -1,7 +1,7 @@
 function selectGroup(el) {
 	var curSel = document.querySelector(".group.selected");
 	if (curSel && curSel.id !== el.id) {
-		curSel.className = 'group';
+		curSel.className = curSel.className.replace(/ *selected/, '');
 	}
 
 	var details = document.getElementById("details");
