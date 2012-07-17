@@ -311,6 +311,22 @@ a:hover {
 	box-shadow: 0 0 10px #4090d0;
 }
 
+.group .info-part {
+	margin: 0;
+	padding: 0;
+}
+
+.group .info-part, .group .action-part {
+	-webkit-transition: all 0.2s ease-in-out;
+	-moz-transition: all 0.2s ease-in-out;
+	-ms-transition: all 0.2s ease-in-out;
+	-o-transition: all 0.2s ease-in-out;
+}
+
+.group.own.selected .info-part {
+	margin-right: 73px;
+}
+
 .group .progress, .group .progress * {
 	margin: 0;
 	padding: 0;
@@ -353,19 +369,45 @@ a:hover {
 	float: right;
 }
 
-.group .info .delete, .group .info .pause, .group .info .resume {
+.group .action-part {
+	margin: 0;
+	padding: 0;
+
+	position: relative;
+	top: -60px;
+	left: 1px;
+
+	float: right;
+	width: 0;
+	opacity: 0;
+	overflow: hidden;
+}
+
+.group .action-part > div {
+	width: 74px;
+	height: 30px;
+	margin: 0;
+	padding: 0;
+}
+
+.group.own.selected .action-part {
+	width: 74px;
+	opacity: 1;
+}
+
+.group .action-part .delete, .group .action-part .pause, .group .action-part .resume {
 	display: block;
 	cursor: pointer;
 
 	float: right;
 	position: relative;
-	top: -6px;
-	left: 6px;
-	padding: 6px 0;
+	padding: 3px 6px;
 	margin: 0;
-	width: 0;
-	opacity: 0;
+	width: 24px;
+	height: 24px;
 	overflow: hidden;
+
+	border-left: 1px solid #303030;
 
 	-webkit-transition: all 0.2s ease-in-out;
 	-moz-transition: all 0.2s ease-in-out;
@@ -373,64 +415,60 @@ a:hover {
 	-o-transition: all 0.2s ease-in-out;
 }
 
-.group .info .delete span, .group .info .pause span, .group .info .resume span {
+.group .action-part .delete span, .group .action-part .pause span, .group .action-part .resume span {
 	display: block;
 	width: 24px;
 	height: 24px;
 	position: relative;
-	top: -2px;
 }
 
-.group .info .delete {
+.group .action-part .delete {
 	border-bottom-right-radius: 10px;
 	border-top-right-radius: 10px;
 
 	background-color: #903030;
 
-	background-image: -webkit-linear-gradient(top, #903030, #802020, #903030);
-	background-image: -moz-linear-gradient(top, #903030, #802020, #903030);
-	background-image: -ms-linear-gradient(top, #903030, #802020, #903030);
-	background-image: -o-linear-gradient(top, #903030, #802020, #903030);
+	background-image: -webkit-linear-gradient(top, #903030, #701010, #903030);
+	background-image: -moz-linear-gradient(top, #903030, #701010, #903030);
+	background-image: -ms-linear-gradient(top, #903030, #701010, #903030);
+	background-image: -o-linear-gradient(top, #903030, #701010, #903030);
 }
 
-.group .info .delete span {
+.group .action-part .delete span {
 	background-image: url(/img/delete-icon.svg);
 }
 
-.group .info .pause {
-	background-color: #4090d0;
+.group .action-part .pause {
+	background-color: #3080c0;
 
-	background-image: -webkit-linear-gradient(top, #4090d0, #3080c0, #4090d0);
-	background-image: -moz-linear-gradient(top, #4090d0, #3080c0, #4090d0);
-	background-image: -ms-linear-gradient(top, #4090d0, #3080c0, #4090d0);
-	background-image: -o-linear-gradient(top, #4090d0, #3080c0, #4090d0);
+	background-image: -webkit-linear-gradient(top, #3080c0, #1060a0, #3080c0);
+	background-image: -moz-linear-gradient(top, #3080c0, #1060a0, #3080c0);
+	background-image: -ms-linear-gradient(top, #3080c0, #1060a0, #3080c0);
+	background-image: -o-linear-gradient(top, #3080c0, #1060a0, #3080c0);
 }
 
-.group .info .pause span {
+.group .action-part .pause span {
 	background-image: url(/img/pause-icon.svg);
 }
 
-.group .info .resume {
-	background-color: #d09040;
+.group .action-part .resume {
+	background-color: #c08030;
 
-	background-image: -webkit-linear-gradient(top, #d09040, #c08030, #d09040);
-	background-image: -moz-linear-gradient(top, #d09040, #c08030, #d09040);
-	background-image: -ms-linear-gradient(top, #d09040, #c08030, #d09040);
-	background-image: -o-linear-gradient(top, #d09040, #c08030, #d09040);
+	background-image: -webkit-linear-gradient(top, #c08030, #a06010, #c08030);
+	background-image: -moz-linear-gradient(top, #c08030, #a06010, #c08030);
+	background-image: -ms-linear-gradient(top, #c08030, #a06010, #c08030);
+	background-image: -o-linear-gradient(top, #c08030, #a06010, #c08030);
 }
 
-.group .info .resume span {
+.group .action-part .resume span {
 	background-image: url(/img/resume-icon.svg);
 }
 
-.group.selected .info .delete, .group.selected:not(.paused) .info .pause, .group.selected.paused .info .resume {
-	padding: 6px 6px;
-	width: 24px;
-	opacity: 0.9;
-}
-
-.group.selected:not(.paused) .info .pause, .group.selected.paused .info .resume {
-	margin-left: 3px;
+.group.paused .action-part .pause, .group:not(.paused) .action-part .resume {
+	padding: 6px 0;
+	width: 0;
+	opacity: 0;
+	border: 0;
 }
 
 #details h1 {

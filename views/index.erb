@@ -7,20 +7,27 @@
 <div id="groupsPane">
 	<ul id="groups">
 		<% @groups.each do |group| %>
-			<li id="group-<%== group.id %>" class="group<%= " paused" if group.paused %>" onclick="selectGroup(this)">
-				<div class="progress">
-					<% n_total = group.jobs.length; n_complete = group.jobs(:completed_at.not => nil).length; n_processing = group.jobs(:worker.not => nil, :completed_at => nil).length %>
-					<div class="complete" style="width:<%= n_complete.to_f/n_total*100 %>%;"></div><div class="processing" style="width:<%= n_processing.to_f/n_total*100 %>%;"></div>
+			<% own = @user && (group.user == @user || @user.is_admin) %>
+			<li id="group-<%== group.id %>" class="group<%= " paused" if group.paused %><%= " own" if own %>">
+				<div class="info-part" onclick="selectGroup(this.parentNode)">
+					<div class="progress">
+						<% n_total = group.jobs.length; n_complete = group.jobs(:completed_at.not => nil).length; n_processing = group.jobs(:worker.not => nil, :completed_at => nil).length %>
+						<div class="complete" style="width:<%= n_complete.to_f/n_total*100 %>%;"></div><div class="processing" style="width:<%= n_processing.to_f/n_total*100 %>%;"></div>
+					</div>
+					<div class="info">
+						<div class="name"><%== group.name %></div>
+						<div class="owner"><%== group.user.email %></div>
+					</div>
 				</div>
-				<div class="info">
-					<div class="name"><%== group.name %></div>
-					<% if @user and (group.user == @user or @user.is_admin) %>
+				<% if own %>
+				<div class="action-part">
+					<div>
 						<div class="delete" onclick="deleteGroup(<%== group.id %>)"><span></span></div>
 						<div class="pause" onclick="pauseGroup(<%== group.id %>)"><span></span></div>
 						<div class="resume" onclick="resumeGroup(<%== group.id %>)"><span></span></div>
-					<% end %>
-					<div class="owner"><%== group.user.email %></div>
+					</div>
 				</div>
+				<% end %>
 			</li>
 		<% end %>
 	</ul>
