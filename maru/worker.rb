@@ -146,7 +146,7 @@ module Maru
 
 						raise $!
 					end
-				rescue Errno::ECONNREFUSED
+				rescue Errno::ECONNREFUSED, RestClient::BadGateway
 					Log.warn "Can not connect to #{m}"
 				rescue Maru::MasterLink::NoJobsAvailable
 				rescue SystemExit
