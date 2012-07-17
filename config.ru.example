@@ -15,6 +15,9 @@ use Rack::Session::Cookie, :secret => nil, :expire_after => 2592000 # 1 month
 #require 'maru/basic_filestore'
 #Maru::Master.settings.filestore = Maru::BasicFilestore.new "/srv/http/example.com/files/maru/", "http://example.com/files/maru/"
 
+## uncomment to set the log level to WARN (the default is INFO)
+#Maru::Log.log_level = "WARN"
+
 ## uncomment for access logging
 #use Rack::CommonLogger
 

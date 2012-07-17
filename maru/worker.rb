@@ -286,6 +286,10 @@ USAGE
 					options[:group_expiry] = num.to_i
 				end
 
+				opts.on "-l", "--log-level LEVEL", Log::LOG_LEVELS, "Set log level (DEBUG, INFO, WARN, ERROR, CRITICAL) Default: INFO" do |level|
+					Log.log_level = level.upcase
+				end
+
 				opts.on "-r", "--require FILE", "Load a ruby script (most likely a plugin) before starting" do |f|
 					require f
 				end
@@ -297,6 +301,10 @@ USAGE
 
 					if options[:plugins]
 						options[:plugins].each { |f| require f }
+					end
+
+					if options[:log_level]
+						Log.log_level = options[:log_level]
 					end
 				end
 
