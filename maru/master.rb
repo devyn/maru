@@ -26,6 +26,8 @@ module Maru
 
 		set    :root,          File.join( File.dirname( __FILE__ ), '..' )
 
+		set    :environment,   ENV["RACK_ENV"] || :production
+
 		set    :views,         -> { File.join( root, 'views'  ) }
 		set    :public_folder, -> { File.join( root, 'static' ) }
 
