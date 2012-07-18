@@ -614,11 +614,128 @@ function setGroupNewFormKind(kind) {
 }
 
 function restrictGroupNewForm(restrictions) {
-	for (var i = 0; i < restrictions.length; i++) {
-	}
+	document.getElementById("group-new-form").restrictions = restrictions;
 }
 
-function validateGroupNewForm(flash) {
+function validateGroupNewForm() {
+	var form = document.getElementById("group-new-form")
+	  , ok   = true;
+
+	for (var i = 0; i < form.restrictions.length; i++) {
+		try {
+			var r = form.restrictions[i]
+				, e = document.getElementById(fieldNameToId(r.name))
+				;
+
+			if ((r.empty === false && !e.value) || (r.empty === true && e.value)) {
+				ok = false;
+				flash(e, "flash-box-error");
+				continue;
+			}
+
+			var vi = validInputsIn(e.children);
+
+			console.log([r,e,vi]);
+
+			if (typeof r.min_items === 'number' && vi.length < r.min_items) {
+				ok = false;
+				flash(e.getElementsByClassName("add-to-list")[0], "flash-text-error");
+			} else if (typeof r.max_items === 'number' && vi.length > r.max_items) {
+				ok = false;
+
+				// flash all items over the limit
+				for (var j = r.max_items; j < vi.length; j++) flash(vi[j], "flash-box-error");
+			}
+
+			switch (r.verify) {
+				case 'number':
+					if (!e.value.replace(/ /g, '').match(/^-?[0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?$/)) {
+						ok = false;
+						flash(e, "flash-box-error");
+					} else {
+						var k = parseInt(e.value, 10);
+
+						if ((r.min && k < r.min) || (r.max && k > r.max)) {
+							ok = false;
+							flash(e, "flash-box-error");
+						}
+					}
+					break;
+				case 'numbers':
+					for (var j = 0; j < vi.length; j++) {
+						if (!vi[j].value.replace(/ /g, '').match(/^-?[0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?$/)) {
+							ok = false;
+							flash(vi[j], "flash-box-error");
+						} else {
+							var k = parseInt(vi[j].value, 10);
+
+							if ((r.min && k < r.min) || (r.max && k > r.max)) {
+								ok = false;
+								flash(vi[j], "flash-box-error");
+							}
+						}
+					}
+					break;
+				case 'integer':
+					if (!e.value.replace(/ /g, '').match(/^-?[0-9]+$/)) {
+						ok = false;
+						flash(e, "flash-box-error");
+					} else {
+						var k = parseInt(e.value, 10);
+
+						if ((r.min && k < r.min) || (r.max && k > r.max)) {
+							ok = false;
+							flash(e, "flash-box-error");
+						}
+					}
+					break;
+				case 'integers':
+					for (var j = 0; j < vi.length; j++) {
+						if (!vi[j].value.replace(/ /g, '').match(/^-?[0-9]+$/)) {
+							ok = false;
+							flash(vi[j], "flash-box-error");
+						} else {
+							var k = parseInt(vi[j].value, 10);
+
+							if ((r.min && k < r.min) || (r.max && k > r.max)) {
+								ok = false;
+								flash(vi[j], "flash-box-error");
+							}
+						}
+					}
+					break;
+				case 'url':
+					// (maybe) TODO
+				case 'urls':
+					// (maybe) TODO
+			}
+		} catch (ex) {
+			console.log(ex);
+			continue;
+		}
+	}
+
+	if (!ok) flash(document.getElementById("group-new-form-submit"), "flash-box-error");
+
+	return ok;
+}
+
+function validInputsIn(a) {
+	var o = new Array();
+
+	for (var i = 0; i < a.length; i++) {
+		var e = a[i].firstChild;
+
+		if (typeof e.value === 'string' && e.value.replace(/^\s*|\s*$/g, '').length > 0) {
+			o.push(e);
+		}
+	}
+
+	return o;
+}
+
+function fieldNameToId(name) {
+	return 'field-' + name.replace(/\[([^\]]*)\]/g, '-$1');
 }
 
 function addToGroupNewFormList(triggerEl) {

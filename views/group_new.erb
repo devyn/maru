@@ -1,5 +1,5 @@
 <div id="group-new" class="single-pane">
-	<form id="group-new-form" method="POST" enctype="multipart/form-data">
+	<form id="group-new-form" method="POST" enctype="multipart/form-data" onsubmit="return validateGroupNewForm();">
 		<select id="kind" name="kind" onchange="setGroupNewFormKind(this.value);">
 			<option value="">--- [select one] ---</option>
 		<% Maru::Plugin::PLUGINS.each do |pl| %>
