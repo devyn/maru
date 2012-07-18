@@ -68,7 +68,7 @@ body {
 	color: #d0d0d0;
 }
 
-input[type="submit"], button {
+input[type="submit"]:not([disabled]), button {
 	cursor: pointer;
 }
 
