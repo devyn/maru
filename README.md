@@ -45,46 +45,51 @@ bundle.
 Proceed to edit the `worker.yaml` using the following reference:
 
 <dl>
-<dt>`name`</dt>
+<dt>name</dt>
 <dd>
   Required. The name of the worker. Must be unique across all registered masters.
 </dd>
-<dt>`masters`</dt>
+<dt>masters</dt>
 <dd>
-  A list of `{url,key}` objects. For example:
+  A list of <code>{url,key}</code> objects. For example:
 
-      masters:
-      - url: https://compute.example.com/
-        key: t912jpgz9tm40drqqr73lhrh
-      - url: https://alice.example.org/maru/
-        key: ck29my3ivkstit7tno7kzijf
+<pre>
+masters:
+- url: https://compute.example.com/
+  key: t912jpgz9tm40drqqr73lhrh
+- url: https://alice.example.org/maru/
+  key: ck29my3ivkstit7tno7kzijf
+</pre>
 </dd>
-<dt>`plugins`</dt>
+<dt>plugins</dt>
 <dd>
   A list of paths to plugin files to load. It is recommended that these be absolute paths.
 </dd>
-<dt>`wait_time`</dt>
+<dt>wait_time</dt>
 <dd>
   Duration in seconds to wait before retrying all known masters if no jobs were found.
-  Default: `60`.
+  Default: 60.
 </dd>
-<dt>`group_expiry`</dt>
+<dt>group_expiry</dt>
 <dd>
   Length of time in seconds after the last recorded activity until a group's cached data expires.
-  Default: `3600`.
+  Default: 3600.
 </dd>
-<dt>`log_level`</dt>
+<dt>log_level</dt>
 <dd>
-  Sets the minimum log level. Acceptable values: `DEBUG`, `INFO`, `WARN`, `ERROR`, `CRITICAL`.
-  Default: `INFO`.
+  Sets the minimum log level. Acceptable values: <code>DEBUG</code>, <code>INFO</code>,
+  <code>WARN</code>, <code>ERROR</code>, <code>CRITICAL</code>.
+  Default: <code>INFO</code>.
 </dd>
-<dt>`temp_dir`</dt>
+<dt>temp_dir</dt>
 <dd>
-  Directory in which to keep temporary files, like the group cache. Default: `/tmp/maru.<PID>`.
+  Directory in which to keep temporary files, like the group cache.
+  Default: <code>/tmp/maru.&lt;PID&gt;</code>.
 </dd>
-<dt>`keep_temp`</dt>
+<dt>keep_temp</dt>
 <dd>
-  Boolean; whether to keep temporary files after the worker process has exited. Default: `false`.
+  Boolean; whether to keep temporary files after the worker process has exited.
+  Default: <code>false</code>.
 </dd>
 </dl>
 
