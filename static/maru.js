@@ -667,6 +667,14 @@ function removeFromGroupNewFormList(triggerEl) {
 	triggerEl.parentNode.parentNode.removeChild(triggerEl.parentNode);
 }
 
+function toggleSection(el) {
+	if (el.className.match(/expanded/)) {
+		el.className = el.className.replace(/ *expanded/, '');
+	} else {
+		el.className += ' expanded';
+	}
+}
+
 window.addEventListener('load', function () {
 	var error = document.getElementById("error");
 	if (error) {

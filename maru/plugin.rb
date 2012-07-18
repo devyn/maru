@@ -196,7 +196,7 @@ module Maru
 			end
 
 			def section(name, options={})
-				@html << %'<div class="section#{" expanded" if options[:expanded]}"><h2>#{CGI.escape_html name}</h2>'
+				@html << %'<div class="section#{" expanded" if options[:expanded]}"><h2 onclick="toggleSection(this.parentNode)">#{CGI.escape_html name}</h2>'
 
 				yield if block_given?
 
@@ -352,7 +352,7 @@ module Maru
 			end
 
 			def label(name, options)
-				@html << %'<label for="#{cat_name(name)}">#{CGI.escape_html options[:label]}' if options[:label]
+				@html << %'<label for="#{cat_name(name)}">#{CGI.escape_html options[:label]}<br/>' if options[:label]
 
 				yield if block_given?
 

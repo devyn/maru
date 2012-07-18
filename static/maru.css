@@ -643,3 +643,68 @@ a:hover {
 	margin-top: 0.5em;
 	margin-left: 6em;
 }
+
+#group-new #kind {
+	margin-bottom: 2em;
+}
+
+#group-new input:not([type]), #group-new input[type="password"] {
+	text-align: center;
+	border: 1px solid #303030;
+}
+
+#group-new select {
+	text-align: center;
+}
+
+#group-new input[type="file"] {
+	background-color: #303030;
+	color: #909090;
+	padding: 0.25em;
+	border-radius: 5px;
+	margin: 5px 0;
+	border: none;
+}
+
+#group-new li {
+	margin: 5px 0;
+}
+
+#group-new h3 {
+	font-size: inherit;
+	font-weight: normal;
+	margin: 0;
+	padding: 0;
+}
+
+#group-new h2 {
+	font-size: 14pt;
+	border-bottom: 1px solid #606060;
+	color: #202020;
+	padding-bottom: 0.5em;
+	margin: 2em;
+}
+
+#group-new .section {
+	height: 33px;
+	padding: 0;
+	margin: 1.5em 0;
+	overflow: hidden;
+}
+
+#group-new .section h2 {
+	margin-top: 0;
+	cursor: pointer;
+}
+
+#group-new .section h2::before {
+	content: '▶ ';
+}
+
+#group-new .section.expanded h2::before {
+	content: '▼ ';
+}
+
+#group-new .section.expanded {
+	height: auto;
+}
