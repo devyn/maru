@@ -360,7 +360,7 @@ function addWorker(formEl) {
 				worker.appendChild(key);
 
 				a1.appendChild(document.createTextNode("regenerate key"));
-				a1.onclick = regenerateKeyForWorker.bind(a2, res["id"], a2);
+				a1.onclick = regenerateKeyForWorker.bind(a1, res["id"], a1);
 				li1.appendChild(a1);
 				ul.appendChild(li1);
 
