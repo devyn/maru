@@ -1,4 +1,5 @@
 require_relative '../../master'
+require_relative '../plugin_support'
 
 module Maru
 	class Master < Sinatra::Base
@@ -15,7 +16,7 @@ module Maru
 
 			halt 404 unless plugin = Maru::Plugin[kind]
 
-			f = Maru::Plugin::GroupFormBuilder.new
+			f = PluginSupport::GroupFormBuilder.new
 
 			plugin.build_group_form(f)
 
@@ -35,7 +36,7 @@ module Maru
 			group.kind   = params[:kind]
 			group.public = params[:public] ? true : false
 
-			form = Maru::Plugin::GroupFormBuilder.new
+			form = PluginSupport::GroupFormBuilder.new
 			plugin.build_group_form(form)
 
 			if !(errors = form.validate(params)).empty?
@@ -43,7 +44,7 @@ module Maru
 				halt 400, erb(:group_new)
 			end
 
-			group_builder = Maru::Plugin::GroupBuilder.new group, settings.filestore
+			group_builder = PluginSupport::GroupBuilder.new group, settings.filestore
 			par           = form.process_params(params)
 
 			if plugin.respond_to? :validate_group_params and !(errors = plugin.validate_group_params(par)).empty?

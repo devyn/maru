@@ -7,6 +7,8 @@ require 'openssl'
 
 require_relative 'version'
 require_relative 'plugin'
+require_relative 'worker/plugin_support'
+require_relative 'multi_access_hash'
 require_relative 'log'
 
 module Maru
@@ -41,7 +43,7 @@ module Maru
 				res = @resource[:job].get(:params => params)
 				case res.code
 				when 200
-					Maru::Plugin::MultiAccessHash.new(JSON.parse(res)["job"])
+					Maru::MultiAccessHash.new(JSON.parse(res)["job"])
 				when 204
 					raise NoJobsAvailable
 				end
@@ -192,7 +194,7 @@ module Maru
 					download_prerequisite pre
 				end if job["prerequisites"]
 
-				result = Maru::Plugin::JobResultBuilder.new
+				result = PluginSupport::JobResultBuilder.new
 
 				plugin.process_job( job, result )
 
