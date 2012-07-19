@@ -57,7 +57,10 @@ function deleteGroup(group) {
 		if (req.readyState === 4 && req.status === 204) {
 			var groupEl = document.getElementById("group-" + group);
 
-			if (groupEl && groupEl.parentNode) groupEl.parentNode.removeChild(groupEl);
+			if (groupEl && groupEl.parentNode) {
+				groupEl.parentNode.removeChild(groupEl);
+				clearDetails();
+			}
 		}
 	};
 
@@ -83,6 +86,10 @@ function setDetails(group, onsuccess) {
 
 	req.open('GET', "/group/"+group+"/details");
 	req.send(null);
+}
+
+function clearDetails() {
+	document.getElementById("details").innerHTML = "";
 }
 
 function subscribeGroups() {
