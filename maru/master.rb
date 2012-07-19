@@ -22,20 +22,21 @@ module Maru
 
 		require_relative 'master/http_subscriber'
 
-		enable :static
+		enable  :static
+		disable :dump_errors
 
-		set    :root,          File.join( File.dirname( __FILE__ ), '..' )
+		set     :root,          File.join( File.dirname( __FILE__ ), '..' )
 
-		set    :environment,   ENV["RACK_ENV"] || :production
+		set     :environment,   ENV["RACK_ENV"] || :production
 
-		set    :views,         -> { File.join( root, 'views'  ) }
-		set    :public_folder, -> { File.join( root, 'static' ) }
+		set     :views,         -> { File.join( root, 'views'  ) }
+		set     :public_folder, -> { File.join( root, 'static' ) }
 
-		set    :erubis,        :escape_html => true
+		set     :erubis,        :escape_html => true
 
-		set    :filestore,     nil
+		set     :filestore,     nil
 
-		set    :group_subscribers, []
+		set     :group_subscribers, []
 
 		configure do
 			DataMapper.setup( :default, ENV["DATABASE_URL"] || "sqlite://#{Dir.pwd}/maru.db" )
@@ -80,6 +81,8 @@ module Maru
 		end
 
 		require_relative 'master/helpers'
+
+		require_relative 'master/controller/errors'
 
 		require_relative 'master/controller/index'
 		require_relative 'master/controller/group'

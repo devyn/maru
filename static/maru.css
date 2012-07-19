@@ -186,6 +186,28 @@ a:hover {
 	margin-right: 4px;
 }
 
+#critical-error {
+	position: absolute;
+	margin: auto;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	text-align: center;
+	width: 50%;
+	height: 50%;
+
+	background-color: #903030;
+	border: 1px dashed #303030;
+}
+
+#critical-error h1 {
+	margin: 1em 10%;
+	padding-bottom: 0.5em;
+	border-bottom: 1px solid #d0d0d0;
+	overflow: auto;
+}
+
 #content {
 	position: absolute;
 	top: 44px;
