@@ -242,7 +242,7 @@ a:hover {
 	color: #202020;
 }
 
-#groupsPane {
+#groups-pane {
 	position: absolute;
 	left: 0;
 	width: 65%;
@@ -252,7 +252,7 @@ a:hover {
 	color: #303030;
 }
 
-#detailsPane {
+#details-pane {
 	position: absolute;
 	right: 0;
 	width: 35%;
@@ -262,7 +262,7 @@ a:hover {
 	color: #909090
 }
 
-#groupsPane > ul, #detailsPane > div {
+#groups-pane > ul, #details-pane > div {
 	position: absolute;
 	top: 0;
 	bottom: 0;
@@ -274,13 +274,13 @@ a:hover {
 	padding: 1em;
 }
 
-#groupsPane > ul {
+#groups-pane > ul {
 	list-style-type: none;
 	margin: 0;
 	border-right: 1px solid #303030;
 }
 
-#detailsPane > div {
+#details-pane > div {
 	border-left: 1px solid #909090;
 }
 

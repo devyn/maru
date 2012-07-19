@@ -4,7 +4,7 @@
 	});
 </script>
 
-<div id="groupsPane">
+<div id="groups-pane">
 	<ul id="groups">
 		<% @groups.each do |group| %>
 			<% own = @user && (group.user == @user || @user.is_admin) %>
@@ -33,7 +33,7 @@
 	</ul>
 </div>
 
-<div id="detailsPane">
+<div id="details-pane">
 	<div id="details">
 	</div>
 </div>
