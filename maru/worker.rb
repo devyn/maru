@@ -41,7 +41,7 @@ module Maru
 				res = @resource[:job].get(:params => params)
 				case res.code
 				when 200
-					JSON.parse(res)["job"]
+					Maru::Plugin::MultiAccessHash.new(JSON.parse(res)["job"])
 				when 204
 					raise NoJobsAvailable
 				end

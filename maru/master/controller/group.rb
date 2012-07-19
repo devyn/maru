@@ -35,14 +35,23 @@ module Maru
 			group.kind   = params[:kind]
 			group.public = params[:public] ? true : false
 
-			if !(errors = plugin.validate_group_params(params)).empty?
+			form = Maru::Plugin::GroupFormBuilder.new
+			plugin.build_group_form(form)
+
+			if !(errors = form.validate(params)).empty?
 				@error = errors.map { |e| "- #{e}" }.join("\n")
 				halt 400, erb(:group_new)
 			end
 
 			group_builder = Maru::Plugin::GroupBuilder.new group, settings.filestore
+			par           = form.process_params(params)
 
-			plugin.build_group(group_builder, params)
+			if plugin.respond_to? :validate_group_params and !(errors = plugin.validate_group_params(par)).empty?
+				@error = errors.map { |e| "- #{e}" }.join("\n")
+				halt 400, erb(:group_new)
+			end
+
+			plugin.build_group(group_builder, par)
 
 			if group_builder.save
 				notify_group_creation group

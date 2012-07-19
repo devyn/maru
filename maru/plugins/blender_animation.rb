@@ -18,15 +18,14 @@ module Maru
 			end
 
 			def build_group(group, params)
-				group.name params[:name]
+				group.name params.name
 
-				initial_frame, final_frame = params[:initial_frame].to_i, params[:final_frame].to_i
+				group.details "initial frame" => params.initial_frame, "final frame" => params.final_frame,
+				              ".blend file" => params.blend_file.name, "output name" => params.output_name
 
-				group.details "initial frame" => initial_frame, "final frame" => final_frame, ".blend file" => params[:blend_file][:filename], "output name" => params[:output_name]
+				group.prerequisite :source => params.blend_file, :destination => params.blend_file.name
 
-				group.prerequisite :source => params[:blend_file][:tempfile], :destination => params[:blend_file][:filename]
-
-				(initial_frame..final_frame).each do |frame_number|
+				(params.initial_frame..params.final_frame).each do |frame_number|
 					group.job do |job|
 						job.name    "frame #{frame_number}"
 						job.details "frame number" => frame_number
@@ -35,9 +34,9 @@ module Maru
 			end
 
 			def process_job(job, result)
-				n = job["details"]["frame number"]
-				f = job["group"]["details"][".blend file"]
-				o = job["group"]["details"]["output name"]
+				n = job.details["frame number"]
+				f = job.group.details[".blend file"]
+				o = job.group.details["output name"]
 
 				if spawn "blender", "--background", File.expand_path(f), "--render-output", File.expand_path(o), "--threads", "1", "--render-frame", n.to_s
 					result.files( o.sub( /#+/ ) { |s| "%0#{s.length}d" % n } )

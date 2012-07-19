@@ -14,7 +14,7 @@ module Maru
 			end
 
 			def build_group(group, params)
-				range = params[:start].to_i .. params[:end].to_i
+				range = params.start .. params.end
 
 				group.name "Primes from #{range.min} to #{range.max}"
 				group.details :start => range.min, :end => range.max
@@ -28,7 +28,7 @@ module Maru
 			end
 
 			def process_job(job, result)
-				number = job["details"]["number"]
+				number = job.details.number
 
 				if number.prime?
 					log.info "#{number} is a prime number"

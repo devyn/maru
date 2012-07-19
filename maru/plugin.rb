@@ -1,4 +1,5 @@
 require 'cgi'
+require 'uri'
 
 class String
 	def to_const(root=Object)
@@ -8,19 +9,7 @@ class String
 	def machine_name_to_human_name
 		gsub( '/', ' / ' ).gsub( '_', ' ' ).gsub( /\b([A-Za-z])/ ) { $1.upcase }
 	end
-end
 
-class Module
-	def human_name
-		name.gsub( /(?<=[a-z])([A-Z])/ ) { " #$1" }.gsub( '::', ' / ' )
-	end
-
-	def machine_name
-		name.gsub( /(?<=[a-z])([A-Z])/ ) { "_#$1" }.gsub( '::', '/' ).downcase
-	end
-end
-
-class String
 	def numeric?
 		!!(gsub(' ','') =~ /^-?[0-9]+(?:\.[0-9]+)?(?:e-?[0-9]+)?$/)
 	end
@@ -34,6 +23,24 @@ class String
 		true
 	rescue
 		false
+	end
+end
+
+class Module
+	def human_name
+		name.gsub( /(?<=[a-z])([A-Z])/ ) { " #$1" }.gsub( '::', ' / ' )
+	end
+
+	def machine_name
+		name.gsub( /(?<=[a-z])([A-Z])/ ) { "_#$1" }.gsub( '::', '/' ).downcase
+	end
+end
+
+class Object
+	def define_meta_method name, *args, &block
+		class << self
+			self
+		end.__send__ :define_method, name, *args, &block
 	end
 end
 
@@ -56,139 +63,166 @@ module Maru
 			$?.success?
 		end
 
-		def validate_group_params(params)
-			f = GroupFormBuilder.new
-			self.build_group_form(f)
-
-			errors = []
-
-			f.restrictions.each do |restriction|
-				target = find_name_in(params, restriction[:name]) if restriction[:name]
-
-				friendly_name = restriction[:label] || restriction[:name]
-
-				if restriction[:empty] == false and (empty = target.to_s.strip.empty?)
-					errors << "#{friendly_name} is required."
-					next
-				elsif restriction[:empty] == true and !empty
-					errors << "#{friendly_name} must be empty."
-					next
-				end
-
-				if restriction[:min_items] and (target.nil? or target.size < restriction[:min_items])
-					errors << "Not enough #{(restriction[:label] || restriction[:name]).downcase}."
-					next
-				end
-
-				if restriction[:max_items] and !target.nil? and target.size > restriction[:max_items]
-					errors << "Too many #{(restriction[:label] || restriction[:name]).downcase}."
-					next
-				end
-
-				case restriction[:verify]
-				when "number"
-					if target.to_s.numeric?
-						if restriction[:min] and target.to_f < restriction[:min]
-							errors << "#{friendly_name} must be at least #{restriction[:min]}."
-						end
-
-						if restriction[:max] and target.to_f > restriction[:max]
-							errors << "#{friendly_name} must be at most #{restriction[:max]}."
-						end
-					else
-						errors << "#{friendly_name} must be numeric."
-					end
-				when "numbers"
-					if target.values.all? &:numeric?
-						if restriction[:min] and target.to_a.any? { |x| x.to_f < restriction[:min] }
-							errors << "#{friendly_name} must contain numbers of at least #{restriction[:min]}."
-						end
-
-						if restriction[:max] and target.to_a.any? { |x| x.to_f > restriction[:max] }
-							errors << "#{friendly_name} must contain numbers of at most #{restriction[:max]}."
-						end
-					else
-						errors << "#{friendly_name} must contain only numbers."
-					end
-				when "integer"
-					if target.to_s.integer?
-						if restriction[:min] and target.to_i < restriction[:min]
-							errors << "#{friendly_name} must be at least #{restriction[:min]}."
-						end
-
-						if restriction[:max] and target.to_i > restriction[:max]
-							errors << "#{friendly_name} must be at most #{restriction[:max]}."
-						end
-					else
-						errors << "#{friendly_name} must be an integer."
-					end
-				when "integers"
-					if target.values.all? &:integer?
-						if restriction[:min] and target.to_a.any? { |x| x.to_i < restriction[:min] }
-							errors << "#{friendly_name} must contain integers of at least #{restriction[:min]}."
-						end
-
-						if restriction[:max] and target.to_a.any? { |x| x.to_i > restriction[:max] }
-							errors << "#{friendly_name} must contain integers of at most #{restriction[:max]}."
-						end
-					else
-						errors << "#{friendly_name} must contain only integers."
-					end
-				when "url"
-					if target.to_s.url?
-						if restriction[:schemes] and not restriction[:schemes].include? URI.parse(target).scheme.downcase
-							supported_schemes = if restriction[:schemes].size == 1
-								restriction[:schemes][0].upcase
-							else
-								restriction[:schemes][0..-2].map(&:upcase).join(", ") + "or " + restriction[:schemes][-1].upcase
-							end
-							errors << "#{friendly_name} must be a(n) #{supported_schemes} URL."
-						end
-					else
-						errors << "#{friendly_name} must be a URL."
-					end
-				when "urls"
-					if target.values.all? &:url?
-						if restriction[:schemes] and not target.values.all? { |u| restriction[:schemes].include? URI.parse(u).scheme.downcase }
-							supported_schemes = if restriction[:schemes].size == 1
-								restriction[:schemes][0].upcase
-							else
-								restriction[:schemes][0..-2].map(&:upcase).join(", ") + "and " + restriction[:schemes][-1].upcase
-							end
-							errors << "#{friendly_name} must contain only #{supported_schemes} URLs."
-						end
-					else
-						errors << "#{friendly_name} must contain only URLs."
-					end
-				end
-			end
-
-			errors
-		end
-
-		def find_name_in(params, name)
-			if md = name.match(/^\[?([A-Za-z0-9_.-]+)\]?/)
-				if md.post_match.strip.empty?
-					params[md[1]]
-				else
-					find_name_in params[md[1]], md.post_match
-				end
-			else
-				nil
-			end
-		end
-
 		def log
 			Maru::Log
 		end
 
 		class GroupFormBuilder
-			attr_reader :html, :restrictions
+			attr_reader :html, :fields, :restrictions
 
 			def initialize
-				@html = ""
+				@html         = ""
 				@restrictions = []
-				@stack = []
+				@fields       = {}
+				@stack        = []
+			end
+
+			def validate(params)
+				errors = []
+
+				@restrictions.each do |restriction|
+					target = find_name_in(params, restriction[:name]) if restriction[:name]
+
+					friendly_name = restriction[:label] || restriction[:name]
+
+					if restriction[:empty] == false and (empty = target.to_s.strip.empty?)
+						errors << "#{friendly_name} is required."
+						next
+					elsif restriction[:empty] == true and !empty
+						errors << "#{friendly_name} must be empty."
+						next
+					end
+
+					if restriction[:min_items] and (target.nil? or target.size < restriction[:min_items])
+						errors << "Not enough #{(restriction[:label] || restriction[:name]).downcase}."
+						next
+					end
+
+					if restriction[:max_items] and !target.nil? and target.size > restriction[:max_items]
+						errors << "Too many #{(restriction[:label] || restriction[:name]).downcase}."
+						next
+					end
+
+					case restriction[:verify]
+					when "number"
+						if target.to_s.numeric?
+							if restriction[:min] and target.to_f < restriction[:min]
+								errors << "#{friendly_name} must be at least #{restriction[:min]}."
+							end
+
+							if restriction[:max] and target.to_f > restriction[:max]
+								errors << "#{friendly_name} must be at most #{restriction[:max]}."
+							end
+						else
+							errors << "#{friendly_name} must be numeric."
+						end
+					when "numbers"
+						if target.values.all? &:numeric?
+							if restriction[:min] and target.to_a.any? { |x| x.to_f < restriction[:min] }
+								errors << "#{friendly_name} must contain numbers of at least #{restriction[:min]}."
+							end
+
+							if restriction[:max] and target.to_a.any? { |x| x.to_f > restriction[:max] }
+								errors << "#{friendly_name} must contain numbers of at most #{restriction[:max]}."
+							end
+						else
+							errors << "#{friendly_name} must contain only numbers."
+						end
+					when "integer"
+						if target.to_s.integer?
+							if restriction[:min] and target.to_i < restriction[:min]
+								errors << "#{friendly_name} must be at least #{restriction[:min]}."
+							end
+
+							if restriction[:max] and target.to_i > restriction[:max]
+								errors << "#{friendly_name} must be at most #{restriction[:max]}."
+							end
+						else
+							errors << "#{friendly_name} must be an integer."
+						end
+					when "integers"
+						if target.values.all? &:integer?
+							if restriction[:min] and target.to_a.any? { |x| x.to_i < restriction[:min] }
+								errors << "#{friendly_name} must contain integers of at least #{restriction[:min]}."
+							end
+
+							if restriction[:max] and target.to_a.any? { |x| x.to_i > restriction[:max] }
+								errors << "#{friendly_name} must contain integers of at most #{restriction[:max]}."
+							end
+						else
+							errors << "#{friendly_name} must contain only integers."
+						end
+					when "url"
+						if target.to_s.url?
+							if restriction[:schemes] and not restriction[:schemes].include? URI.parse(target).scheme.downcase
+								supported_schemes = if restriction[:schemes].size == 1
+									restriction[:schemes][0].upcase
+								else
+									restriction[:schemes][0..-2].map(&:upcase).join(", ") + "or " + restriction[:schemes][-1].upcase
+								end
+								errors << "#{friendly_name} must be a(n) #{supported_schemes} URL."
+							end
+						else
+							errors << "#{friendly_name} must be a URL."
+						end
+					when "urls"
+						if target.values.all? &:url?
+							if restriction[:schemes] and not target.values.all? { |u| restriction[:schemes].include? URI.parse(u).scheme.downcase }
+								supported_schemes = if restriction[:schemes].size == 1
+									restriction[:schemes][0].upcase
+								else
+									restriction[:schemes][0..-2].map(&:upcase).join(", ") + "and " + restriction[:schemes][-1].upcase
+								end
+								errors << "#{friendly_name} must contain only #{supported_schemes} URLs."
+							end
+						else
+							errors << "#{friendly_name} must contain only URLs."
+						end
+					end
+				end
+
+				errors
+			end
+
+			def process_params(params)
+				parout = Object.new
+
+				@fields.each do |field, type|
+					val = field.inject(params) { |pa,i| pa[i.to_s] rescue nil }
+
+					case type
+					when :string, :password, :url
+						val = val.to_s.freeze
+					when :strings, :passwords, :urls
+						val = val.map { |k,v| v.to_s.freeze }.freeze
+					when :number
+						val = val.to_f
+					when :numbers
+						val = val.map { |k,v| v.to_f }.freeze
+					when :integer
+						val = val.to_i
+					when :integers
+						val = val.map { |k,v| v.to_i }.freeze
+					when :file
+						fn = val[:filename]
+						val[:tempfile].define_meta_method(:name) { fn }
+
+						val = val[:tempfile]
+					when :files
+						val = val.map do |k,v|
+							fn = v[:filename]
+							v[:tempfile].define_meta_method(:name) { fn }
+
+							v[:tempfile]
+						end
+					when :selectbox
+						val = val.to_s.to_sym
+					end if val
+
+					parout.define_meta_method(field.last) { val }
+				end
+
+				parout
 			end
 
 			def <<(s)
@@ -204,6 +238,8 @@ module Maru
 			end
 
 			def string(name, options={})
+				define_field name, :string unless options[:class]
+
 				label name, options do
 					@html << %'<input id="#{cat_id(name)}" class="#{options[:class] || "string"}" name="#{cat_name(name)}"#{%' type="#{options[:type]}"' if options[:type]}#{%' value="#{options[:default]}"' if options[:default]}/>'
 
@@ -212,6 +248,8 @@ module Maru
 			end
 
 			def strings(name, options={})
+				define_field name, :strings unless options[:class]
+
 				@html << %'<h3>#{CGI.escape_html options[:label]}</h3>' if options[:label]
 
 				@html << %'<ul class="#{options[:class] || "strings"}" id="#{cat_id(name)}">'
@@ -238,18 +276,26 @@ module Maru
 			end
 
 			def password(name, options={})
+				define_field name, :password unless options[:class]
+
 				string name, {:class => "password", :type => "password"}.merge(options)
 			end
 
 			def passwords(name, options={})
+				define_field name, :passwords unless options[:class]
+
 				strings name, {:class => "passwords", :el_class => "password", :el_type => "password"}.merge(options)
 			end
 
 			def file(name, options={})
+				define_field name, :file unless options[:class]
+
 				string name, {:class => "file", :type => "file"}.merge(options)
 			end
 
 			def files(name, options={})
+				define_field name, :files unless options[:class]
+
 				strings name, {:class => "files", :el_class => "file", :el_type => "file"}.merge(options)
 			end
 
@@ -267,6 +313,8 @@ module Maru
 			end
 
 			def selectbox(name, options={})
+				define_field name, :selectbox unless options[:class]
+
 				label name, options do
 					@html << %'<select id="#{cat_id(name)}" class="#{options[:class] || "selectbox"}" name="#{cat_name(name)}">"'
 
@@ -283,6 +331,8 @@ module Maru
 			end
 
 			def url(name, options={})
+				define_field name, :url unless options[:class]
+
 				string name, {:class => "url"}.merge(options)
 
 				if options[:schemes]
@@ -293,6 +343,8 @@ module Maru
 			end
 
 			def urls(name, options={})
+				define_field name, :urls unless options[:class]
+
 				strings name, {:class => "urls", :el_class => "url"}.merge(options)
 
 				if options[:schemes]
@@ -303,6 +355,8 @@ module Maru
 			end
 
 			def number(name, options={})
+				define_field name, :number unless options[:class] or options[:integer]
+
 				string name, {:class => "number"}.merge(options)
 
 				r = {label: options[:label], name: cat_name(name), verify: options[:integer] ? "integer" : "number"}
@@ -318,6 +372,8 @@ module Maru
 			end
 
 			def numbers(name, options={})
+				define_field name, :numbers unless options[:class] or options[:integer]
+
 				strings name, {:class => "numbers", :el_class => "number"}.merge(options)
 
 				r = {label: options[:label], name: cat_name(name), verify: options[:integer] ? "integers" : "numbers"}
@@ -333,10 +389,14 @@ module Maru
 			end
 
 			def integer(name, options={})
+				define_field name, :integer unless options[:class]
+
 				number name, {:integer => true}.merge(options)
 			end
 
 			def integers(name, options={})
+				define_field name, :integers unless options[:class]
+
 				numbers name, {:integer => true}.merge(options)
 			end
 
@@ -357,6 +417,22 @@ module Maru
 				yield if block_given?
 
 				@html << "</label>" if options[:label]
+			end
+
+			def find_name_in(params, name)
+				if md = name.match(/^\[?([A-Za-z0-9_.-]+)\]?/)
+					if md.post_match.strip.empty?
+						params[md[1]]
+					else
+						find_name_in params[md[1]], md.post_match
+					end
+				else
+					nil
+				end
+			end
+
+			def define_field(name, type)
+				@fields[@stack + [name]] = type
 			end
 		end
 
@@ -497,6 +573,61 @@ module Maru
 				end
 
 				alias to_s message
+			end
+		end
+
+		class MultiAccessHash < Hash
+			def initialize(base_hash)
+				super()
+
+				update base_hash if base_hash
+
+				process = proc do |o|
+					case o
+					when Hash
+						self.class.new(o)
+					when Array
+						o.map &process
+					else
+						o
+					end
+				end
+
+				each do |k,v|
+					self[k] = process[v]
+				end
+			end
+
+			def [](k)
+				if include? k
+					super k
+				elsif include? k.to_s
+					super k.to_s
+				elsif include? k.to_s.to_sym
+					super k.to_s.to_sym
+				else
+					nil
+				end
+			end
+
+			def []=(k,v)
+				if include? k
+					super k, v
+				elsif include? k.to_s
+					super k.to_s, v
+				elsif include? k.to_s.to_sym
+					super k.to_s.to_sym, v
+				else
+					nil
+				end
+			end
+
+			def method_missing name, *args, &block
+				if name.to_s =~ /=$/
+					self[name] = args[0]
+				else
+					self[name]
+				end
 			end
 		end
 
