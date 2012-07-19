@@ -85,6 +85,7 @@ module Maru
 		require_relative 'master/controller/group'
 		require_relative 'master/controller/user'
 		require_relative 'master/controller/admin'
+		require_relative 'master/controller/worker'
 		require_relative 'master/controller/worker_api'
 	end
 end
