@@ -114,12 +114,14 @@ function subscribeGroupsViaEventStream() {
 	return source;
 }
 
+var long_poll_token;
+
 function longPollGroups() {
 	var req = new XMLHttpRequest();
 
 	req.onreadystatechange = function () {
-		if (req.readyState == 4) {
-			if (req.status == 200) {
+		if (req.readyState === 4) {
+			if (req.status === 200) {
 				try {
 					var rs = req.responseText.replace(/\0/g, '');
 
@@ -131,18 +133,27 @@ function longPollGroups() {
 				} finally {
 					longPollGroups();
 				}
+			} else if (req.status === 410) {
+				window.location.reload();
 			} else {
 				setTimeout(longPollGroups, 3000);
 			}
 		}
 	};
 
-	req.open("GET", "/subscribe.poll");
+	if (typeof long_poll_token === 'undefined') {
+		req.open("GET", "/subscribe.poll");
+	} else {
+		req.open("GET", "/subscribe.poll?token=" + escape(long_poll_token));
+	}
+
 	req.send(null);
 }
 
 function processSubMessage(message) {
-	if (message.type === "groupStatus") {
+	if (message.type === "setToken") {
+		long_poll_token = message.token;
+	} else if (message.type === "groupStatus") {
 		processGroupStatusMessage(message);
 	} else if (message.type === "groupCreate") {
 		processGroupCreateMessage(message);

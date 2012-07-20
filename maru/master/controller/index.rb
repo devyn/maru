@@ -33,14 +33,26 @@ module Maru
 		get '/subscribe.poll' do
 			content_type "application/json"
 
-			stream :keep_open do |out|
-				socket = LongPollSubscriber.new( @user, out )
+			if params[:token]
+				socket = LongPollSubscriber.get( params[:token] )
 
-				socket.onclose do
-					settings.group_subscribers.delete socket
+				if socket
+					stream :keep_open do |out|
+						socket.reconnect( out )
+					end
+				else
+					[410, {reason: 'expired'}.to_json]
 				end
+			else
+				stream :keep_open do |out|
+					socket = LongPollSubscriber.new( @user, out )
 
-				settings.group_subscribers << socket
+					socket.onclose do
+						settings.group_subscribers.delete socket
+					end
+
+					settings.group_subscribers << socket
+				end
 			end
 		end
 	end
