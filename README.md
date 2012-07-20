@@ -103,6 +103,10 @@ Assuming you now have a `worker.yaml` ready, simply:
 
 and watch your newly minted worker run jobs.
 
+## What's next?
+
+More information can be found on the [maru wiki](https://github.com/devyn/maru/wiki/).
+
 ## Bugs
 
 Please report them [here](https://github.com/devyn/maru/issues/).
