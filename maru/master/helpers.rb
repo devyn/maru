@@ -49,7 +49,8 @@ module Maru
 						next if !group.public and !socket.user
 						next if !group.public and not (socket.user == group.user or socket.user.is_admin)
 
-						socket.send( { type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total, estimatedTimeLeft: group.estimated_time_left, paused: group.paused }.to_json )
+						socket.send( { type: "groupStatus", groupID: group.id, complete: complete, processing: processing, total: total,
+						               estimatedTimeLeft: group.estimated_time_left, paused: group.paused }.to_json )
 					end
 				end
 			end
@@ -60,7 +61,8 @@ module Maru
 						next if !group.public and !socket.user
 						next if !group.public and not (socket.user == group.user or socket.user.is_admin)
 
-						socket.send( { type: "groupCreate", groupID: group.id, name: group.name, owner: group.user.email, paused: group.paused, own: (socket.user == group.user or socket.user.is_admin) }.to_json );
+						socket.send( { type: "groupCreate", groupID: group.id, name: group.name, owner: group.user.email, paused: group.paused,
+						               own: (socket.user and (socket.user == group.user or socket.user.is_admin)) }.to_json );
 					end
 				end
 			end
