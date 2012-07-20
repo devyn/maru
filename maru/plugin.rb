@@ -1,25 +1,5 @@
 require_relative 'log'
 
-class String
-	def to_const(root=Object)
-		split( / *\/ */ ).inject( root ) { |c,e| c.const_get( e.sub( /^([a-z])/ ) { $1.upcase }.gsub( /[ _]([A-Za-z])/ ) { $1.upcase }.gsub( ' ', '' ) ) }
-	end
-
-	def machine_name_to_human_name
-		gsub( '/', ' / ' ).gsub( '_', ' ' ).gsub( /\b([A-Za-z])/ ) { $1.upcase }
-	end
-end
-
-class Module
-	def human_name
-		name.gsub( /(?<=[a-z])([A-Z])/ ) { " #$1" }.gsub( '::', ' / ' )
-	end
-
-	def machine_name
-		name.gsub( /(?<=[a-z])([A-Z])/ ) { "_#$1" }.gsub( '::', '/' ).downcase
-	end
-end
-
 module Maru
 	module Plugin
 		PLUGINS = []
@@ -29,7 +9,7 @@ module Maru
 		end
 
 		def self.[](name)
-			PLUGINS.include?(c = name.to_const) ? c : nil
+			PLUGINS.find { |pl| pl.machine_name == name }
 		rescue Exception
 			nil
 		end
@@ -41,6 +21,14 @@ module Maru
 
 		def log
 			Maru::Log
+		end
+
+		def human_name
+			name.gsub( /(?<=[a-z])([A-Z])/ ) { " #$1" }.gsub( '::', ' / ' )
+		end
+
+		def machine_name
+			name.gsub( /(?<=[a-z])([A-Z])/ ) { "_#$1" }.gsub( '::', '/' ).downcase
 		end
 	end
 end

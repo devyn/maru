@@ -1,5 +1,5 @@
 <h1><%== @group.name %></h1>
-<h2><%== @group.kind.machine_name_to_human_name %></h2>
+<h2><%== (pl = Maru::Plugin[@group.kind]) ? pl.human_name : "\"#{@group.kind}\" (missing)" %></h2>
 
 <h3>Status</h3>
 <div id="status">
