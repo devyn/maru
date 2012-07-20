@@ -19,7 +19,8 @@ It is intended as a means of distributed computing through collaboration.
     $ "$EDITOR" config.ru
 
 Proceed to edit the `config.ru` according to the comments. At the minimum, you should change
-the secret and install a filestore. You also likely want to require some plugins.
+the secret and install a filestore. You also likely want to require some
+[plugins](https://github.com/devyn/maru/wiki/Plugins).
 
 If `ENV["DATABASE_URL"]` is set before requiring `maru/master`, it will be fed to DataMapper.
 You likely want to change this, as sqlite3 (the default) is rather slow.
