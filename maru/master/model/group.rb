@@ -49,7 +49,7 @@ module Maru
 			timestamps :created_at
 
 			def to_s
-				"##{self.id} (#{self.name})"
+				"##{self.id} (#{self.name} - #{self.user.email})"
 			end
 
 			def estimated_time_left

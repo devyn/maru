@@ -20,7 +20,7 @@ module Maru
 			property :completed_at,  DateTime
 
 			def to_s
-				"##{self.id} (#{self.group.name} / #{self.name})"
+				"##{self.id} (#{self.group.name} / #{self.name} - #{self.group.user.email})"
 			end
 		end
 	end

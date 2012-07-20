@@ -39,6 +39,8 @@ module Maru
 
 			content_type 'application/json'
 			if @new_user.valid?
+				Log.info "#{@user} created user #{@new_user}"
+
 				%{{"user":#{@new_user.to_json( :only => [ :id, :email, :can_own_groups, :can_own_workers, :is_admin ] )}}}
 			else
 				# vuuuuub
@@ -56,8 +58,12 @@ module Maru
 
 			@target_user[params[:field]] = request.body.read.strip
 
+			t = @target_user[params[:field]]
+
 			content_type 'application/json'
 			if @target_user.save
+				Log.info "#{@user} #{t ? "gave" : "took"} permission `#{params[:field]}` #{t ? "to" : "away from"} #{@target_user}"
+
 				halt 204
 			else
 				halt 400, {:errors => @target_user.errors.full_messages}.to_json
@@ -77,6 +83,8 @@ module Maru
 			must_be_admin!
 
 			if user = User.get(params[:id])
+				Log.info "#{@user} forcibly logged in as #{user}"
+
 				session[:user] = user.id
 				session[:authenticated_at] = Time.now
 				redirect to('/')
@@ -149,7 +157,13 @@ module Maru
 				User.get(@target_user.id).destroy or raise
 			end
 
-			session[:user] = nil if @target_user == @user
+			if @target_user == @user
+				Log.info "#{@user} deleted their account"
+
+				session[:user] = nil
+			else
+				Log.info "#{@user} deleted user #{@target_user}"
+			end
 
 			halt 204
 		end

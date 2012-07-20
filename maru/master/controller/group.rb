@@ -55,6 +55,8 @@ module Maru
 			plugin.build_group(group_builder, par)
 
 			if group_builder.save
+				Log.info "Group #{group} created"
+
 				notify_group_creation group
 
 				redirect to('/')
@@ -87,7 +89,10 @@ module Maru
 			halt 403 unless @group.user == @user or @user.is_admin
 
 			if @group.update :paused => true
+				Log.info "Group #{@group} paused by #{@user}"
+
 				update_group_status @group
+
 				halt 204
 			else
 				halt 500
@@ -101,7 +106,10 @@ module Maru
 			halt 403 unless @group.user == @user or @user.is_admin
 
 			if @group.update :paused => false
+				Log.info "Group #{@group} resumed by #{@user}"
+
 				update_group_status @group
+
 				halt 204
 			else
 				halt 500
@@ -118,6 +126,8 @@ module Maru
 				if settings.filestore.respond_to? :clean
 					settings.filestore.clean @group
 				end
+
+				Log.info "Group #{@group} deleted by #{@user}"
 
 				notify_group_deletion @group
 
