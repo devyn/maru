@@ -84,8 +84,6 @@ module Maru
 				require 'rack/builder'
 				require 'thin'
 
-				require_relative 'master'
-
 				app = Rack::Builder.new
 
 				rackup = config["rackup"] || "config.ru"
