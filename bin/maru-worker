@@ -4,4 +4,4 @@ $:.unshift File.dirname( File.dirname( __FILE__ ) )
 
 require 'maru/worker'
 
-Maru::Worker.run
+Maru::Worker.run(*ARGV)

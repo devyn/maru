@@ -92,27 +92,41 @@ module Maru
 	end
 
 	class Worker
-		attr_accessor :masters, :kinds, :temp_dir
+		attr_accessor :masters, :temp_dir, :keep_temp, :group_expiry, :wait_time
 
 		DEFAULTS = {
-			name:         "A Worker",
-			masters:      [{"url" => "http://maru.example.org/", "key" => "totally secret key"}],
-			temp_dir:     "/tmp/maru.#$$",
-			group_expiry: 7200
+			"name"         => "A Worker",
+			"masters"      => [{"url" => "http://maru.example.org/", "key" => "totally secret key"}],
+			"temp_dir"     => "/tmp/maru.#$$",
+			"group_expiry" => 7200
 		}
 
 		class NothingToDo  < Exception; end
 		class Inconsistent < Exception; end
 
 		def initialize( config={} )
-			config = DEFAULTS.dup.merge( config )
+			config = DEFAULTS.merge( config )
 
-			@name         = config[:name]
-			@masters      = config[:masters].map { |m| Maru::MasterLink.new( m["url"], @name, m["key"] ) }
-			@temp_dir     = config[:temp_dir]
-			@group_expiry = config[:group_expiry]
+			@name         = config["name"]
+			@masters      = config["masters"].map { |m| Maru::MasterLink.new( m["url"], @name, m["key"] ) }
+			@temp_dir     = config["temp_dir"]
+			@keep_temp    = config["keep_temp"]
+			@group_expiry = config["group_expiry"]
+			@wait_time    = config["wait_time"]
 			@blacklist    = {}
 			@robin        = 0
+
+			if config["plugins"]
+				config["plugins"].each { |f| require f }
+			end
+
+			if config["log_level"]
+				Log.log_level = config["log_level"]
+			end
+
+			if config["priority"]
+				Process.setpriority Process::PRIO_PROCESS, 0, config["priority"]
+			end
 		end
 
 		def work
@@ -264,7 +278,35 @@ module Maru
 
 		public
 
-		def self.run
+		def run
+			trap( :INT  ) { exit }
+			trap( :TERM ) { exit }
+			trap( :QUIT ) { exit }
+
+			at_exit do
+				Log.info "Waiting for child processes..."
+				Process.waitall
+				Log.info "Cleaning up..."
+				unless @keep_temp
+					FileUtils.rm_rf @temp_dir
+				end
+			end
+
+			loop do
+				begin
+					cleanup
+					work
+				rescue NothingToDo
+					sleep @wait_time || 30
+				rescue SystemExit
+					raise $!
+				rescue Exception
+					Log.exception $!
+				end
+			end
+		end
+
+		def self.run(*argv)
 			require 'optparse'
 
 			options = {}
@@ -275,19 +317,19 @@ Usage: #$0 -c worker-config.yaml [options]
 USAGE
 
 				opts.on "-t", "--temp-dir DIR", "Specify directory to use for temporary files. Default: /tmp/maru.<PID>" do |temp_dir|
-					options[:temp_dir] = temp_dir
+					options["temp_dir"] = temp_dir
 				end
 
 				opts.on "--[no-]keep-temp", "Keep temp dir on exit. Default: false" do |v|
-					options[:keep_temp] = v
+					options["keep_temp"] = v
 				end
 
 				opts.on "-w", "--wait-time N", "Amount of time (in seconds) to wait if there are no jobs available. Default: 30" do |num|
-					options[:wait_time] = num.to_i
+					options["wait_time"] = num.to_i
 				end
 
 				opts.on "-e", "--group-expiry N", "Amount of time (in seconds) to keep group files. Default: 7200" do |num|
-					options[:group_expiry] = num.to_i
+					options["group_expiry"] = num.to_i
 				end
 
 				opts.on "-l", "--log-level LEVEL", Log::LOG_LEVELS, "Set log level (DEBUG, INFO, WARN, ERROR, CRITICAL) Default: INFO" do |level|
@@ -299,17 +341,7 @@ USAGE
 				end
 
 				opts.on "-c", "--config-file FILE", "Loads a configuration file in YAML format. See README." do |f|
-					YAML.load_file( f ).each do |k,v|
-						options[k.to_s.to_sym] = v
-					end
-
-					if options[:plugins]
-						options[:plugins].each { |f| require f }
-					end
-
-					if options[:log_level]
-						Log.log_level = options[:log_level]
-					end
+					options.update YAML.load_file( f )
 				end
 
 				opts.on_tail "--config-example", "Print out a template configuration file" do
@@ -335,34 +367,14 @@ EXAMPLE
 					puts "maru worker #{Maru::VERSION} (https://github.com/devyn/maru/)"
 					exit
 				end
-			end.parse! ARGV
+			end.parse!(argv)
 
-			w = Maru::Worker.new options
-
-			trap( :INT  ) { exit }
-			trap( :TERM ) { exit }
-
-			at_exit do
-				Log.info "Waiting for child processes..."
-				Process.waitall
-				Log.info "Cleaning up..."
-				unless options[:keep_temp]
-					FileUtils.rm_rf w.temp_dir
-				end
+			if argv.size > 0
+				puts opts
+				exit 1
 			end
 
-			loop do
-				begin
-					w.cleanup
-					w.work
-				rescue Maru::Worker::NothingToDo
-					sleep options[:wait_time] || 30
-				rescue SystemExit
-					raise $!
-				rescue Exception
-					Log.exception $!
-				end
-			end
+			Maru::Worker.new(options).run
 		end
 	end
 end

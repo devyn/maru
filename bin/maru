@@ -1,0 +1,48 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+require 'maru/version'
+require 'maru/operator'
+
+cmd = ARGV.shift
+
+operator = proc do
+	begin
+		config = YAML.load_file(ENV["MARU_CONFIG"] || "config.yaml")
+
+		Maru::Operator.new(config)
+	rescue
+		abort "!! #$!"
+	end
+end
+
+case cmd
+when "start"
+	operator = operator[]
+
+	exit 1 unless operator.start_services(*ARGV)
+when "stop"
+	operator = operator[]
+
+	exit 1 unless operator.stop_services(*ARGV)
+when "restart"
+	operator = operator[]
+
+	exit 1 unless operator.restart_services(*ARGV)
+when "logs"
+	operator = operator[]
+
+	exit 1 unless operator.stream_logs(*ARGV)
+when "example"
+	puts <<-EXAMPLE
+
+EXAMPLE
+when "version"
+	puts "maru #{Maru::VERSION} (https://github.com/devyn/maru/)"
+else
+	puts <<-USAGE
+
+USAGE
+
+	exit 1 unless cmd == "help"
+end

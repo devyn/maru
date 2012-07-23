@@ -1,2 +1,5 @@
 *.swp
 maru.db
+pid/
+log/
+config.ru
