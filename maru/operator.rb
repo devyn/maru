@@ -217,7 +217,7 @@ module Maru
 			yield uid, gid if block_given?
 
 			if user
-				Process.initgroups(user, group)
+				Process.initgroups(user, gid)
 				Process::GID.change_privilege(gid) if gid
 				Process::UID.change_privilege(uid)
 			end
