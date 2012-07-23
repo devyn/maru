@@ -25,7 +25,7 @@ module Maru
 		enable  :static
 		disable :dump_errors
 
-		set     :root,          File.join( File.dirname( __FILE__ ), '..' )
+		set     :root,          File.join( File.dirname( __FILE__ ), '..', '..' )
 
 		set     :environment,   ENV["RACK_ENV"] || :production
 
