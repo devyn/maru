@@ -165,6 +165,8 @@ module Maru
 				rescue Errno::ECONNREFUSED, RestClient::BadGateway
 					Log.warn "Can not connect to #{m}"
 				rescue Maru::MasterLink::NoJobsAvailable
+				rescue Maru::MasterLink::CanNotAuthenticate
+					Log.warn "Unable to authenticate with #{m}"
 				rescue SystemExit
 					raise $!
 				rescue Exception
