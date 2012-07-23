@@ -1,0 +1,65 @@
+#!/bin/sh
+
+# An rc script for maru.
+
+export PATH="/srv/maru/source/bin:$PATH"
+export RUBYLIB="/srv/maru/source:$RUBYLIB"
+export MARU_CONFIG="/srv/maru/config.yaml"
+
+. /etc/rc.conf
+. /etc/rc.d/functions
+
+# You can override the above vars in /etc/conf.d/maru
+[ -e /etc/conf.d/maru ] && . /etc/conf.d/maru
+
+start() {
+        stat_busy "Starting maru..."
+        cd /srv/maru/source
+        if bundle exec maru start &>/dev/null; then
+                add_daemon maru
+                stat_done
+        else
+                stat_fail
+        fi
+}
+
+stop() {
+        stat_busy "Stopping maru..."
+        cd /srv/maru/source
+        if bundle exec maru stop &>/dev/null; then
+                rm_daemon maru
+                stat_done
+        else
+                stat_fail
+        fi
+}
+
+restart() {
+        stat_busy "Restarting maru..."
+        cd /srv/maru/source
+        if bundle exec maru restart &>/dev/null; then
+                stat_done
+        else
+                stat_fail
+        fi
+}
+
+# Only use if you know what you're doing!
+update() {
+        stat_busy "Updating maru..."
+        cd /srv/maru/source
+        if git pull &>/dev/null; then
+                stat_done
+                restart
+        else
+                stat_fail
+        fi
+}
+
+case "$1" in
+start)   start;;
+stop)    stop;;
+restart) restart;;
+update)  update;;
+*)       echo "Usage: $0 {start|stop|restart|update}"
+esac
