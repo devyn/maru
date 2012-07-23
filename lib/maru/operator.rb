@@ -47,7 +47,7 @@ module Maru
 		end
 
 		def stop_services(*names)
-			names = (@config["master"] ? ["master"] : []) + @config["workers"].map { |w| w["name"] } if names.empty?
+			names = @config["workers"].map { |w| w["name"] } + (@config["master"] ? ["master"] : []) if names.empty?
 
 			names.inject(true) do |success, name|
 				stop_service(name) && success
