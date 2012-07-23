@@ -3,7 +3,7 @@
 # An rc script for maru.
 
 export PATH="/srv/maru/source/bin:$PATH"
-export RUBYLIB="/srv/maru/source:$RUBYLIB"
+export RUBYLIB="/srv/maru/source/lib:$RUBYLIB"
 export MARU_CONFIG="/srv/maru/config.yaml"
 
 . /etc/rc.conf
