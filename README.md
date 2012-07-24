@@ -34,14 +34,14 @@ or `"CRITICAL"`. `"WARN"` is recommended if `"INFO"`, the default, seems too ver
 The master must be run on an EventMachine-based server. Thin is recommended and included in the
 bundle.
 
-    $ bundle exec thin start -p <PORT> # [-d] to daemonize
+    $ RUBYLIB=lib bundle exec thin start -p <PORT> # [-d] to daemonize
 
 ### Worker
 
     $ git clone https://github.com/devyn/maru.git
     $ cd maru
     $ bundle install
-    $ bundle exec bin/maru-worker --config-example > worker.yaml
+    $ bundle exec ruby -Ilib bin/maru-worker --config-example > worker.yaml
 
 Proceed to edit the `worker.yaml` using the following reference:
 
@@ -104,9 +104,21 @@ recommended to start one worker per core.
 
 Assuming you now have a `worker.yaml` ready, simply:
 
-    $ bundle exec bin/maru-worker -c worker.yaml
+    $ bundle exec ruby -Ilib bin/maru-worker -c worker.yaml
 
 and watch your newly minted worker run jobs.
+
+### Operator
+
+If you want to automate things further, the "operator" exists as `bin/maru`. It is capable
+of launching both master and worker processes as daemons and attaching to their logs.
+
+Usage is beyond this short tutorial, but `bin/maru help` and `bin/maru example` are
+both good places to start.
+
+If you opt to use the operator, there is an RC script for Arch Linux in
+`support/arch_linux/maru`. It expects the maru source to be in `/srv/maru/source`
+and operator config in `/srv/maru/config.yaml`.
 
 ## What's next?
 
