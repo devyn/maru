@@ -1,3 +1,5 @@
+require 'uri'
+
 module Maru
 	class BasicFilestore
 		attr_accessor :base_path, :base_url
@@ -16,7 +18,7 @@ module Maru
 
 				File.chmod(0666 & ~File.umask, target_path) # see issue #15 
 
-				url    = @base_url.chomp('/') + "/#{group.id}/prerequisites/#{name}"
+				url    = @base_url.chomp('/') + "/#{group.id}/prerequisites/#{URI.escape(name)}"
 				sha256 = OpenSSL::Digest::SHA256.file(target_path).hexdigest
 
 				return [url, sha256]
@@ -46,7 +48,7 @@ module Maru
 
 				File.chmod(0666 & ~File.umask, target_path) # see issue #15
 
-				url    = @base_url.chomp('/') + "/#{group.id}/results/#{name}"
+				url    = @base_url.chomp('/') + "/#{group.id}/results/#{URI.escape(name)}"
 				sha256 = OpenSSL::Digest::SHA256.file(target_path).hexdigest
 
 				return [url, sha256]
