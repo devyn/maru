@@ -92,6 +92,10 @@ masters:
   Boolean; whether to keep temporary files after the worker process has exited.
   Default: <code>false</code>.
 </dd>
+<dt>priority</dt>
+<dd>
+  Integer; a priority in the same format as `nice(1)`.
+</dd>
 </dl>
 
 You may wish to keep separate configurations for each worker. Note that workers are by design
