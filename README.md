@@ -94,7 +94,7 @@ masters:
 </dd>
 <dt>priority</dt>
 <dd>
-  Integer; a priority in the same format as `nice(1)`.
+  Integer; a priority in the same format as <code>nice(1)</code>.
 </dd>
 </dl>
 
