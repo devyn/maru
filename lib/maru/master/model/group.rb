@@ -58,7 +58,7 @@ module Maru
 
 				if current == 0
 					"none"
-				elsif most_recent.nil? or average_job_time.nil? or average_amount_of_workers.nil?
+				elsif paused or most_recent.nil? or average_job_time.nil? or average_amount_of_workers.nil?
 					"unknown"
 				else
 					if (t = average_job_time * current / average_amount_of_workers - (Time.now - most_recent.completed_at.to_time)) > 0
