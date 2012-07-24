@@ -12,7 +12,7 @@ export MARU_CONFIG="/srv/maru/config.yaml"
 [ -e /etc/conf.d/maru ] && . /etc/conf.d/maru
 
 start() {
-        stat_busy "Starting maru..."
+        stat_busy "Starting maru"
         cd /srv/maru/source
         if bundle exec bin/maru start &>/dev/null; then
                 add_daemon maru
@@ -23,7 +23,7 @@ start() {
 }
 
 stop() {
-        stat_busy "Stopping maru..."
+        stat_busy "Stopping maru"
         cd /srv/maru/source
         if bundle exec bin/maru stop &>/dev/null; then
                 rm_daemon maru
@@ -34,7 +34,7 @@ stop() {
 }
 
 restart() {
-        stat_busy "Restarting maru..."
+        stat_busy "Restarting maru"
         cd /srv/maru/source
         if bundle exec bin/maru restart &>/dev/null; then
                 stat_done
@@ -45,7 +45,7 @@ restart() {
 
 # Only use if you know what you're doing!
 update() {
-        stat_busy "Updating maru..."
+        stat_busy "Updating maru"
         cd /srv/maru/source
         if git pull &>/dev/null; then
                 stat_done
