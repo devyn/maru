@@ -78,8 +78,10 @@ module Maru
 
 				switch_user_and_group(config["user"]  || @config["user"],
 					                    config["group"] || @config["group"]) { |uid, gid|
-					write_pid_file "master", uid
+					create_pid_dir(gid)
 				}
+
+				write_pid_file "master"
 
 				require 'rack/builder'
 				require 'thin'
@@ -134,8 +136,10 @@ module Maru
 
 				switch_user_and_group(config["user"]  || @config["user"],
 					                    config["group"] || @config["group"]) { |uid, gid|
-					write_pid_file name, uid
+					create_pid_dir(gid)
 				}
+
+				write_pid_file name
 
 				require_relative 'worker'
 
@@ -183,12 +187,21 @@ module Maru
 		end
 
 		def pid_dir
-			d = @config["pid_dir"] || "pid"
-			FileUtils.mkdir_p(d)
-			File.expand_path(d)
+			File.expand_path(@config["pid_dir"] || "pid")
 		end
 
 		private
+
+		def create_pid_dir(gid=nil)
+			if not File.directory?(pid_dir)
+				FileUtils.mkdir_p(pid_dir)
+
+				unless gid.nil?
+					File.chown(nil, gid, pid_dir)
+					File.chmod(0775, pid_dir)
+				end
+			end
+		end
 
 		def output_to_log(name)
 			f = File.open(File.join(log_dir, name + ".log"), 'a')
@@ -198,11 +211,10 @@ module Maru
 			$stdin.close
 		end
 
-		def write_pid_file(name, uid=nil)
+		def write_pid_file(name)
 			File.open(path = File.join(pid_dir, name + ".pid"), 'w') do |f|
 				f.puts $$
 				f.chmod 0644
-				f.chown uid, nil if uid
 			end
 
 			at_exit do
