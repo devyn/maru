@@ -51,7 +51,7 @@ module Maru
 		end
 
 		def complete_job(id, result)
-			with_authentication { @resource[:job][id].post result }
+			with_authentication { @resource[:job][id].post result, :multipart => true }
 		end
 
 		def forfeit_job(id)
