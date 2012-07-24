@@ -348,7 +348,7 @@ USAGE
 
 				opts.on_tail "--config-example", "Print out a template configuration file" do
 					puts <<-EXAMPLE
-name: Skynet-CPU9001
+name: Skynet.9001
 masters:
 - url: https://compute.example.com/
   key: t912jpgz9tm40drqqr73lhrh

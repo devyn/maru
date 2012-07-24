@@ -72,11 +72,11 @@ master:
 #
 # See `maru-worker --config-example`
 workers:
-- name: Hostname-1
+- name: Hostname.1
   masters:
   - url: https://compute.example.com/
     key: ucc4i00uln5chj13w2rw42td
-- name: Hostname-2
+- name: Hostname.2
   masters:
   - url: https://compute.example.com/
     key: pmiu048o9suxsbefynr3pmlv
@@ -109,9 +109,9 @@ Commands:
 
 Note: A service refers to either `master` or any worker name. For example,
 
-    $ maru start master Hostname-1
+    $ maru start master Hostname.1
 
-will start both the master and the worker named `Hostname-1`.
+will start both the master and the worker named `Hostname.1`.
 USAGE
 
 	exit 1 unless cmd == "help"
