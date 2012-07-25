@@ -238,7 +238,7 @@ module Maru
 		def detach
 			fork do
 				Process.setsid
-				fork { yield }
+				yield
 			end
 		end
 
