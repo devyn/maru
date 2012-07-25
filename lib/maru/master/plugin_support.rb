@@ -513,6 +513,10 @@ module Maru
 						@job.details = @job.details.merge(d)
 					end
 
+					def expiry(seconds)
+						@job.expiry = seconds
+					end
+
 					def save(group)
 						@job.group = group
 
