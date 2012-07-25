@@ -1,5 +1,5 @@
 module Maru
-	VERSION = [0,1]
+	VERSION = [1,0,"devel"]
 
 	class << VERSION
 		def to_s

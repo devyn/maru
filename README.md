@@ -1,6 +1,6 @@
 # maru
 
-version 0.1
+version 1.0-devel
 
 maru (丸; circle) is a computational task distribution system designed with sharing in mind.
 
