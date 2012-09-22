@@ -229,10 +229,10 @@ describe Maru::Protocol do
     it "parses commands without triggers or arguments correctly" do
       @protocol.parse "/COMMAND "
 
-      assert !@protocol.parse_data.include?(:response_trigger)
+      refute @protocol.parse_data.include?(:response_trigger), "parse data has a response trigger"
 
-      assert @protocol.parse_data[:command_name] == "COMMAND", "command_name is not COMMAND"
-      assert @protocol.parse_data[:command_args] == [], "command_args are not empty"
+      @protocol.parse_data[:command_name].must_equal "COMMAND"
+      @protocol.parse_data[:command_args].must_be :empty?
 
       @protocol.command_acceptor.expect :send, nil, ["command_COMMAND"]
 
@@ -243,10 +243,10 @@ describe Maru::Protocol do
     it "parses commands without triggers but with arguments correctly" do
       @protocol.parse "/HELLO 5:world"
 
-      assert !@protocol.parse_data.include?(:response_trigger), "parse data has a response trigger"
+      refute @protocol.parse_data.include?(:response_trigger), "parse data has a response trigger"
 
-      assert @protocol.parse_data[:command_name] == "HELLO", "command_name is not HELLO"
-      assert @protocol.parse_data[:command_args] == ["world"], "command_args are not [\"world\"]"
+      @protocol.parse_data[:command_name].must_equal "HELLO"
+      @protocol.parse_data[:command_args].must_equal ["world"]
 
       @protocol.command_acceptor.expect :send, nil, ["command_HELLO", "world"]
 
@@ -257,11 +257,10 @@ describe Maru::Protocol do
     it "parses arguments with spaces and newlines correctly" do
       @protocol.parse "/FOO 10:bar\nbaz da5:m r n"
 
-      assert !@protocol.parse_data.include?(:response_trigger), "parse data has a response trigger"
+      refute @protocol.parse_data.include?(:response_trigger), "parse data has a response trigger"
 
-      assert @protocol.parse_data[:command_name] == "FOO", "command_name is not FOO"
-      assert @protocol.parse_data[:command_args][0] == "bar\nbaz da", "command_args[0] is not \"bar\\nbaz da\""
-      assert @protocol.parse_data[:command_args][1] == "m r n", "command_args[1] is not \"m r n\""
+      @protocol.parse_data[:command_name].must_equal "FOO"
+      @protocol.parse_data[:command_args].must_equal ["bar\nbaz da", "m r n"]
 
       @protocol.command_acceptor.expect :send, nil, ["command_FOO", "bar\nbaz da", "m r n"]
 
@@ -277,9 +276,9 @@ describe Maru::Protocol do
 
       @protocol.parse "5210/ROCK "
 
-      assert @protocol.parse_data[:response_trigger] == 5210, "response_trigger is not 5210"
-      assert @protocol.parse_data[:command_name]     == "ROCK", "command_name is not ROCK"
-      assert @protocol.parse_data[:command_args]     == [], "command_args are not empty"
+      @protocol.parse_data[:response_trigger].must_equal 5210
+      @protocol.parse_data[:command_name].must_equal "ROCK"
+      @protocol.parse_data[:command_args].must_be :empty?
 
       @protocol.command_acceptor.expect :send, nil, ["command_ROCK"]
 
@@ -295,9 +294,9 @@ describe Maru::Protocol do
 
       @protocol.parse "2029/FIRE 4:your4:boss"
 
-      assert @protocol.parse_data[:response_trigger] == 2029, "response_trigger is not 5210"
-      assert @protocol.parse_data[:command_name]     == "FIRE", "command_name is not FIRE"
-      assert @protocol.parse_data[:command_args]     == ["your", "boss"], "command_args are not [\"your\", \"boss\"]"
+      @protocol.parse_data[:response_trigger].must_equal 2029
+      @protocol.parse_data[:command_name].must_equal "FIRE"
+      @protocol.parse_data[:command_args].must_equal ["your", "boss"]
 
       @protocol.command_acceptor.expect :send, nil, ["command_FIRE", "your", "boss"]
 
@@ -389,29 +388,33 @@ describe Maru::Protocol do
     it "writes commands with no arguments and no trigger" do
       @protocol.send_command :HELLO
 
-      assert @out.string == (ex = "/HELLO\n"), "Output is #{@out.string.inspect}; expected #{ex.inspect}"
+      @out.string.must_equal "/HELLO\n"
     end
 
     it "writes commands with arguments but no trigger" do
       @protocol.send_command :HELLO, "a", "b"
 
-      assert @out.string == (ex = "/HELLO 1:a1:b\n"), "Output is #{@out.string.inspect}; expected #{ex.inspect}"
+      @out.string.must_equal "/HELLO 1:a1:b\n"
     end
 
     it "writes commands with a trigger but no arguments, and registers them" do
       @protocol.send_command(:RAWR) { "block" }
 
-      assert @out.string == (ex = "1/RAWR\n"), "Output is #{@out.string.inspect}; expected #{ex.inspect}"
+      @out.string.must_equal "1/RAWR\n"
+
       assert @protocol.triggers[1], "Trigger was not defined"
-      assert @protocol.triggers[1].call == "block", "Calling the trigger gave an unexpected value"
+
+      @protocol.triggers[1].call.must_equal "block"
     end
 
     it "writes commands with a trigger and arguments, and registers them" do
       @protocol.send_command(:RAWR, "hi", "how", "are", "you") { "block" }
 
-      assert @out.string == (ex = "1/RAWR 2:hi3:how3:are3:you\n"), "Output is #{@out.string.inspect}; expected #{ex.inspect}"
+      @out.string.must_equal "1/RAWR 2:hi3:how3:are3:you\n"
+
       assert @protocol.triggers[1], "Trigger was not defined"
-      assert @protocol.triggers[1].call == "block", "Calling the trigger gave an unexpected value"
+
+      @protocol.triggers[1].call.must_equal "block"
     end
   end
 
