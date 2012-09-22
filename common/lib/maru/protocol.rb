@@ -2,6 +2,8 @@ require 'openssl'
 
 module Maru
   module Protocol
+    include EventMachine::Deferrable
+
     attr_accessor :cert_chain_file  # File in which the certificate to use lives.
     attr_accessor :private_key_file # Private key for the certificate.
     attr_accessor :verify_peer      # Optional; a certificate to validate against
@@ -44,10 +46,13 @@ module Maru
         verify_cert = OpenSSL::X509::Certificate.new(@verify_peer)
 
         if cert.to_s != verify_cert.to_s
+          set_deferred_status :failed # Notify callbacks of failure to connect.
           close_connection
           return
         end
       end
+
+      set_deferred_status :succeeded # Notify callbacks of connection.
     end
 
     def receive_data(data)

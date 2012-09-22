@@ -150,6 +150,37 @@ describe Maru::Protocol do
 
       @protocol.ssl_handshake_completed
     end
+
+    it "sets deferred status to [:succeeded] when connection has been established" do
+      succeeded = false
+
+      @protocol.callback do
+        succeeded = true
+      end
+
+      @protocol.ssl_handshake_completed
+
+      assert succeeded, "Callback was not invoked."
+    end
+
+    it "sets deferred status to [:failed] if the peer can not be verified" do
+      failed = false
+
+      @protocol.extend Module.new {
+        define_method(:close_connection) { }
+        define_method(:get_peer_cert)    { GOOGLE_CERT }
+      }
+
+      @protocol.verify_peer = YAHOO_CERT
+
+      @protocol.errback do
+        failed = true
+      end
+
+      @protocol.ssl_handshake_completed
+
+      assert failed, "Errback was not invoked."
+    end
   end
 
   describe "#receive_data" do
