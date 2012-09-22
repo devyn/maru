@@ -117,6 +117,27 @@ describe Maru::Protocol do
       mock.verify
     end
 
+    it "does not reject peers if they present the same certificate as @verify_peer" do
+      mock = Minitest::Mock.new
+
+      @protocol.extend Module.new {
+        define_method :close_connection do |*args|
+          raise "close_connection was called."
+        end
+        define_method :get_peer_cert do |*args|
+          mock.get_peer_cert(*args)
+        end
+      }
+
+      @protocol.verify_peer = GOOGLE_CERT
+
+      mock.expect :get_peer_cert, GOOGLE_CERT
+
+      @protocol.ssl_handshake_completed
+
+      mock.verify
+    end
+
     it "does not reject peers if @verify_peer is not specified" do
       @protocol.extend Module.new {
         define_method :close_connection do |*args|

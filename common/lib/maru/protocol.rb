@@ -43,7 +43,7 @@ module Maru
         cert        = OpenSSL::X509::Certificate.new(get_peer_cert)
         verify_cert = OpenSSL::X509::Certificate.new(@verify_peer)
 
-        if cert.public_key != verify_cert.public_key
+        if cert.to_s != verify_cert.to_s
           close_connection
           return
         end
