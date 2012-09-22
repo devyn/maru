@@ -1,4 +1,5 @@
 require 'minitest/autorun'
+require 'eventmachine'
 require 'maru/protocol'
 
 GOOGLE_CERT = <<-CERT
@@ -69,6 +70,12 @@ zoRJVNoYIvY1arYZf5zv9VZjN5I0HqUc39mNMe9XdZtbkWE+K6yVh6OimKLbizna
 inu9YTrN/4P/w6KzHho=
 -----END CERTIFICATE-----
 CERT
+
+class TestCommandAcceptor
+  def command_PING(str=nil)
+    str ? ["PONG", str] : "PONG"
+  end
+end
 
 describe Maru::Protocol do
   before do
@@ -406,6 +413,94 @@ describe Maru::Protocol do
       assert @protocol.triggers[1], "Trigger was not defined"
       assert @protocol.triggers[1].call == "block", "Calling the trigger gave an unexpected value"
     end
+  end
 
+  it "runs server-side" do
+    expected_response = "/RESULT 1:14:PONG3:baz\n/RESULT 1:24:PONG\n"
+    complete = false
+
+    EventMachine.run do
+      EventMachine.add_timer 3 do
+      end
+
+      EventMachine.start_server "127.0.0.1", 50399, Maru::Protocol do |conn|
+        conn.command_acceptor = TestCommandAcceptor.new
+      end
+
+      EventMachine.connect "127.0.0.1", 50399, Module.new {
+        define_method :post_init do
+          @data = []
+          start_tls
+        end
+
+        define_method :ssl_handshake_completed do
+          send_data "1/PING 3:baz\n"
+          send_data "2/PING\n"
+        end
+
+        define_method :receive_data do |data|
+          @data << data
+
+          # Check whether the sum of the lengths in @data are greater than or equal to our
+          # expected response length
+          if @data.inject(0) { |l,d| l + d.length } >= expected_response.length
+            response = @data.join(nil)
+            response.must_equal expected_response
+
+            complete = true
+            EventMachine.stop_event_loop
+          end
+        end
+      }
+    end
+
+    assert complete, "Task did not complete."
+  end
+
+  it "runs client-side" do
+    expected_request = "1/PING 3:baz\n2/PING\n"
+    complete = false
+
+    EventMachine.run do
+      EventMachine.add_timer 3 do
+        raise "Task did not complete within 3 seconds."
+      end
+
+      EventMachine.start_server "127.0.0.1", 50399, Module.new {
+        define_method :post_init do
+          @data = []
+          start_tls
+        end
+
+        define_method :receive_data do |data|
+          @data << data
+
+          if @data.inject(0) { |l,d| l + d.length } >= expected_request.length
+            request = @data.join(nil)
+            request.must_equal expected_request
+
+            send_data "/RESULT 1:14:PONG3:baz\n"
+            send_data "/RESULT 1:24:PONG\n"
+          end
+        end
+      }
+
+      EventMachine.connect "127.0.0.1", 50399, Maru::Protocol do |conn|
+        conn.callback do
+          conn.send_command :PING, "baz" do |pong, baz|
+            pong.must_equal "PONG"
+            baz.must_equal "baz"
+          end
+
+          conn.send_command :PING do |pong|
+            pong.must_equal "PONG"
+            complete = true
+            EventMachine.stop_event_loop
+          end
+        end
+      end
+    end
+
+    assert complete, "Task did not complete."
   end
 end
