@@ -1,0 +1,36 @@
+#master -> #network: WORKAVAILABLE
+#network -> #worker: WORKAVAILABLE #master
+
+#worker -> #master: IDENTIFY (uuid(#worker)) [name(#worker)]
+#worker -> #master: NETWORK(1) (uuid(#network))
+
+#master -> #network: WHOIS(42) (uuid(#worker))
+#network -> #master: RESULT(42) (pubkey(#worker))
+
+#master -> #worker: CHALLENGE(2) (ch = encrypt(pubkey(#worker), res))
+#worker -> #master: RESULT(2) (decrypt(ch))
+#master -> #worker: RESULT(1) OK
+
+#worker -> #master: ACCEPT (type1) (type2) (typeN)...
+#worker -> #master: REQUEST(3)
+#master -> #worker: RESULT(3) json(#job)
+
+#master -> #network: NOWORKAVAILABLE
+#master -> #manager: // notify that job is pending
+
+// ... do work ...
+
+#worker -> #master: FILE(4) (fileName) (fileSize) (fileSHA)
+#worker -> #master: // file data...
+#master -> #worker: RESULT(4) OK
+
+// ...
+
+#worker -> #master: COMPLETE(5) [json(metadata)] // this data can be evaluated on submission, and it is also included for dependencies
+#master -> #worker: RESULT(5) OK // plugin may evaluate results
+
+// plugin may create additional jobs according to results (but doesn't in this case)
+
+#master -> #manager: // notify that job is complete
+
+
