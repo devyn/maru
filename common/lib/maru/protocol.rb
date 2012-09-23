@@ -165,18 +165,32 @@ module Maru
         #
         # If a trigger can not be found, ignore it.
         if trigger = @triggers.delete(@parse_data[:command_args].shift.to_i)
-          trigger.call *@parse_data[:command_args]
+
+          trigger.set_deferred_status :succeeded, *@parse_data[:command_args]
+        end
+      elsif @parse_data[:command_name] == "ERROR"
+        # Similar to RESULT, but for errors.
+        if trigger = @triggers.delete(@parse_data[:command_args].shift.to_i)
+
+          trigger.set_deferred_status :failed, *@parse_data[:command_args]
         end
       else
-        res = @command_acceptor.send("command_#{@parse_data[:command_name]}", # e.g. AUTH => #command_AUTH
-                                     *@parse_data[:command_args])
+        begin
+          res = @command_acceptor.send("command_#{@parse_data[:command_name]}", # e.g. AUTH => #command_AUTH
+                                       *@parse_data[:command_args])
 
-        # Send the result(s) if the client was expecting them.
-        if trigger = @parse_data[:response_trigger]
-          if res.is_a?(Array)
-            send_command :RESULT, trigger, *res
-          else
-            send_command :RESULT, trigger, res
+          # Send the result(s) if the client was expecting them.
+          if trigger = @parse_data[:response_trigger]
+            if res.is_a?(Array)
+              send_command :RESULT, trigger, *res
+            else
+              send_command :RESULT, trigger, res
+            end
+          end
+        rescue Exception => e
+          # Report the error if the client was expecting a result.
+          if trigger = @parse_data[:response_trigger]
+            send_command :ERROR, trigger, e.class.name, e.message
           end
         end
       end
@@ -205,7 +219,10 @@ module Maru
       out << "\n"
 
       if block
-        @triggers[@trigger_index] = block
+        defer = @triggers[@trigger_index] = Object.new
+        defer.extend(EventMachine::Deferrable)
+
+        block.call(defer)
 
         @trigger_index += 1
       end

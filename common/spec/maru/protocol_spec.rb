@@ -356,6 +356,31 @@ describe Maru::Protocol do
       mock.verify
     end
 
+    it "sends an ERROR command back if there is an error and there is a response_trigger" do
+      mock = Minitest::Mock.new
+
+      @protocol.extend Module.new {
+        define_method :send_command do |*args|
+          mock.send_command *args
+        end
+      }
+
+      @protocol.parse_data = {:response_trigger => 4, :command_name => "FOOTBALL", :command_args => []}
+
+      @protocol.command_acceptor = Object.new
+
+      class << @protocol.command_acceptor
+        def command_FOOTBALL
+          raise RuntimeError, "rugby"
+        end
+      end
+
+      mock.expect :send_command, nil, [:ERROR, 4, "RuntimeError", "rugby"]
+
+      @protocol.dispatch_parsed_command
+      mock.verify
+    end
+
     it "handles incoming RESULT commands by invoking the appropriate trigger" do
       @protocol.parse_data = {:command_name => "RESULT", :command_args => ["404", "your mother"]}
 
@@ -363,7 +388,21 @@ describe Maru::Protocol do
 
       @protocol.triggers = {404 => mock}
 
-      mock.expect :call, nil, ["your mother"]
+      mock.expect :set_deferred_status, nil, [:succeeded, "your mother"]
+
+      @protocol.dispatch_parsed_command
+
+      mock.verify
+    end
+
+    it "handles incoming ERROR commands by invoking the appropriate trigger" do
+      @protocol.parse_data = {:command_name => "ERROR", :command_args => ["500", "SuckError", "you suck"]}
+
+      mock = Minitest::Mock.new
+
+      @protocol.triggers = {500 => mock}
+
+      mock.expect :set_deferred_status, nil, [:failed, "SuckError", "you suck"]
 
       @protocol.dispatch_parsed_command
 
@@ -403,8 +442,6 @@ describe Maru::Protocol do
       @out.string.must_equal "1/RAWR\n"
 
       assert @protocol.triggers[1], "Trigger was not defined"
-
-      @protocol.triggers[1].call.must_equal "block"
     end
 
     it "writes commands with a trigger and arguments, and registers them" do
@@ -413,8 +450,6 @@ describe Maru::Protocol do
       @out.string.must_equal "1/RAWR 2:hi3:how3:are3:you\n"
 
       assert @protocol.triggers[1], "Trigger was not defined"
-
-      @protocol.triggers[1].call.must_equal "block"
     end
   end
 
@@ -424,6 +459,7 @@ describe Maru::Protocol do
 
     EventMachine.run do
       EventMachine.add_timer 3 do
+        raise "Task did not complete within 3 seconds."
       end
 
       EventMachine.start_server "127.0.0.1", 50399, Maru::Protocol do |conn|
@@ -490,15 +526,19 @@ describe Maru::Protocol do
 
       EventMachine.connect "127.0.0.1", 50399, Maru::Protocol do |conn|
         conn.callback do
-          conn.send_command :PING, "baz" do |pong, baz|
-            pong.must_equal "PONG"
-            baz.must_equal "baz"
+          conn.send_command :PING, "baz" do |result|
+            result.callback do |pong, baz|
+              pong.must_equal "PONG"
+              baz.must_equal "baz"
+            end
           end
 
-          conn.send_command :PING do |pong|
-            pong.must_equal "PONG"
-            complete = true
-            EventMachine.stop_event_loop
+          conn.send_command :PING do |result|
+            result.callback do |pong|
+              pong.must_equal "PONG"
+              complete = true
+              EventMachine.stop_event_loop
+            end
           end
         end
       end
