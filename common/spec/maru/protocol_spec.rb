@@ -129,7 +129,7 @@ describe Maru::Protocol do
 
       @protocol.extend Module.new {
         define_method :close_connection do |*args|
-          raise "close_connection was called."
+          flunk "close_connection was called."
         end
         define_method :get_peer_cert do |*args|
           mock.get_peer_cert(*args)
@@ -148,10 +148,10 @@ describe Maru::Protocol do
     it "does not reject peers if @verify_peer is not specified" do
       @protocol.extend Module.new {
         define_method :close_connection do |*args|
-          raise "close_connection was called."
+          flunk "close_connection was called."
         end
         define_method :get_peer_cert do |*args|
-          raise "get_peer_cert was called."
+          flunk "get_peer_cert was called."
         end
       }
 
@@ -459,7 +459,7 @@ describe Maru::Protocol do
 
     EventMachine.run do
       EventMachine.add_timer 3 do
-        raise "Task did not complete within 3 seconds."
+        flunk "Task did not complete within 3 seconds."
       end
 
       EventMachine.start_server "127.0.0.1", 50399, Maru::Protocol do |conn|
@@ -502,7 +502,7 @@ describe Maru::Protocol do
 
     EventMachine.run do
       EventMachine.add_timer 3 do
-        raise "Task did not complete within 3 seconds."
+        flunk "Task did not complete within 3 seconds."
       end
 
       EventMachine.start_server "127.0.0.1", 50399, Module.new {
