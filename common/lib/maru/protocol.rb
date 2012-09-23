@@ -1,4 +1,5 @@
 require 'openssl'
+require 'eventmachine'
 
 module Maru
   module Protocol
