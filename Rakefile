@@ -5,4 +5,6 @@ Rake::TestTask.new do |t|
   t.pattern = "spec/**/*_spec.rb"
 end
 
-YARD::Rake::YardocTask.new
+YARD::Rake::YardocTask.new do |t|
+  t.name = "doc"
+end
