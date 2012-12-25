@@ -2,42 +2,55 @@ require 'openssl'
 require 'eventmachine'
 
 module Maru
+  # Implements the Maru protocol. Use as an EventMachine server.
   module Protocol
     include EventMachine::Deferrable
 
-    attr_accessor :cert_chain_file  # File in which the certificate to use lives.
-    attr_accessor :private_key_file # Private key for the certificate.
-    attr_accessor :verify_peer      # Optional; a certificate to validate against
-                                    # once the connection is established.
+    # @return [String] Path to the certificate chain file to identify with.
+    attr_accessor :cert_chain_file
 
-    # An object that has methods to accept commands, e.g. `command_AUTH`
-    # which corresponds to a hypothetical 'AUTH' command.
+    # @return [String] Path to the private key file for the certificate.
+    attr_accessor :private_key_file
+
+    # @return [String] An optional certificate to validate against once the
+    #   connection is established.
+    attr_accessor :verify_peer
+
+    # @return [Object] An object that has methods to accept commands, e.g. `command_AUTH`
+    #   which corresponds to a hypothetical 'AUTH' command.
     attr_accessor :command_acceptor
 
-    # When set to a block, the block will be called every time data is received,
-    # so that commands may intercept the data (e.g. to accept a file).
+    # @return [Proc] When set to a block, the block will be called every time data is received,
+    #   so that commands may intercept the data (e.g. to accept a file).
     attr_accessor :interceptor
 
-    attr_accessor :input
+    # @return [Symbol] The current state of the network protocol parser.
     attr_accessor :parse_state
+
+    # @return [Hash] Context data for the parser.
     attr_accessor :parse_data
+
+    # @return [Integer] Keeps track of the next unused incremental index for #send_command.
     attr_accessor :trigger_index
+
+    # @return [Hash<Integer,EventMachine::Deferrable>] A collection of triggers to be invoked
+    #   once data has been received in response to a command invocation.
     attr_accessor :triggers
 
+    # @private
     def post_init
-      @input = []
-
       @parse_state = :initial
       @parse_data  = {}
 
       @trigger_index = 1
       @triggers      = {}
 
-      start_tls :private_key_file => @private_key_file,
+      start_tls :private_key_file =>  @private_key_file,
                 :cert_chain_file  => @cert_chain_file,
                 :verify_peer      => false
     end
 
+    # @private
     def ssl_handshake_completed
       if @verify_peer
         # Verify that the peer is indeed the peer we're looking for. This is
@@ -56,6 +69,7 @@ module Maru
       set_deferred_status :succeeded # Notify callbacks of connection.
     end
 
+    # @private
     def receive_data(data)
       if @interceptor
         @interceptor.call(data)
@@ -64,6 +78,7 @@ module Maru
       end
     end
 
+    # @private
     def parse(data)
       index = 0
 
@@ -156,6 +171,7 @@ module Maru
       end
     end
 
+    # @private
     def dispatch_parsed_command
       @parse_data[:command_name].upcase!
 
@@ -200,6 +216,16 @@ module Maru
       @parse_data  = {}
     end
 
+    # Sends a command upstream. If a block is given, the peer will be notified that
+    # a response is expected.
+    #
+    # @param [String,Symbol] name
+    #   The name of the command.
+    # @param [String] args
+    #   Arguments (as strings) to be sent upstream.
+    #
+    # @yieldparam [EventMachine::Deferrable] result
+    #   The deferred result of the command. May be an error.
     def send_command(name, *args, &block)
       out = []
 

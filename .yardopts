@@ -1,0 +1,1 @@
+--no-private {common,manager,master,network,worker}/lib/**/*.rb - README.md
