@@ -72,8 +72,8 @@ inu9YTrN/4P/w6KzHho=
 CERT
 
 class TestCommandAcceptor
-  def command_PING(str=nil)
-    str ? ["PONG", str] : "PONG"
+  def command_BING(str=nil)
+    str ? ["BONG", str] : "BONG"
   end
 end
 
@@ -408,6 +408,27 @@ describe Maru::Protocol do
 
       mock.verify
     end
+
+    it "responds to PING commands" do
+      @protocol.parse_data = {:response_trigger => "500", :command_name => "PING"}
+
+      class << @protocol
+        attr_reader :send_command_called
+
+        def send_command(name, *args)
+          name.to_s.must_equal "RESULT"
+          args[0].must_equal "500"
+          args[1].must_equal "PONG"
+          args[2].must_be :>, 0
+
+          @send_command_called = true
+        end
+      end
+
+      @protocol.dispatch_parsed_command
+
+      assert @protocol.send_command_called, "#send_command was never called."
+    end
   end
 
   describe "#send_command" do
@@ -454,7 +475,7 @@ describe Maru::Protocol do
   end
 
   it "runs server-side" do
-    expected_response = "/RESULT 1:14:PONG3:baz\n/RESULT 1:24:PONG\n"
+    expected_response = "/RESULT 1:14:BONG3:baz\n/RESULT 1:24:BONG\n"
     complete = false
 
     EventMachine.run do
@@ -473,8 +494,8 @@ describe Maru::Protocol do
         end
 
         define_method :ssl_handshake_completed do
-          send_data "1/PING 3:baz\n"
-          send_data "2/PING\n"
+          send_data "1/BING 3:baz\n"
+          send_data "2/BING\n"
         end
 
         define_method :receive_data do |data|
@@ -497,7 +518,7 @@ describe Maru::Protocol do
   end
 
   it "runs client-side" do
-    expected_request = "1/PING 3:baz\n2/PING\n"
+    expected_request = "1/BING 3:baz\n2/BING\n"
     complete = false
 
     EventMachine.run do
@@ -518,24 +539,24 @@ describe Maru::Protocol do
             request = @data.join(nil)
             request.must_equal expected_request
 
-            send_data "/RESULT 1:14:PONG3:baz\n"
-            send_data "/RESULT 1:24:PONG\n"
+            send_data "/RESULT 1:14:BONG3:baz\n"
+            send_data "/RESULT 1:24:BONG\n"
           end
         end
       }
 
       EventMachine.connect "127.0.0.1", 50399, Maru::Protocol do |conn|
         conn.callback do
-          conn.send_command :PING, "baz" do |result|
+          conn.send_command :BING, "baz" do |result|
             result.callback do |pong, baz|
-              pong.must_equal "PONG"
+              pong.must_equal "BONG"
               baz.must_equal "baz"
             end
           end
 
-          conn.send_command :PING do |result|
+          conn.send_command :BING do |result|
             result.callback do |pong|
-              pong.must_equal "PONG"
+              pong.must_equal "BONG"
               complete = true
               EventMachine.stop_event_loop
             end

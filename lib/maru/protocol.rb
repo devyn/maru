@@ -190,6 +190,11 @@ module Maru
 
           trigger.set_deferred_status :failed, *@parse_data[:command_args]
         end
+      elsif @parse_data[:command_name] == "PING"
+        # Built-in PING functionality: returns ["PONG", Time.now.to_i]
+        if trigger = @parse_data[:response_trigger]
+          send_command :RESULT, trigger, "PONG", Time.now.to_i
+        end
       else
         begin
           res = @command_acceptor.send("command_#{@parse_data[:command_name]}", # e.g. AUTH => #command_AUTH

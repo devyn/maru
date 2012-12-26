@@ -57,15 +57,6 @@ module Maru
       end
 
       # @group Commands
-
-      # Simple ping/pong.
-      #
-      # @returns [Array<String,Integer>]
-      #   The literal `"PONG"` followed by the time of receipt in seconds since
-      #   UNIX epoch (1970-01-01 00:00 UTC).
-      def command_PING
-        ["PONG", Time.now.to_i]
-      end
     end
   end
 end

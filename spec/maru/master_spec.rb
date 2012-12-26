@@ -32,12 +32,4 @@ describe Maru::Master do
 end
 
 describe Maru::Master::Client do
-  describe "#command_PING" do
-    it "returns an array of the pattern [\"PONG\", <Time->Integer>]" do
-      result = Maru::Master::Client.new(nil, nil).command_PING
-
-      result[0].must_equal "PONG"
-      result[1].must_be :>, 0
-    end
-  end
 end
