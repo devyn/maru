@@ -5,23 +5,10 @@ source 'https://rubygems.org'
 gem 'eventmachine', '~> 1.0.0'
 gem 'em-synchrony', '~> 1.0.2'
 
-group :master do
-  gem 'redis', '~> 3.0.1'
-end
+gem 'redis',        '~> 3.0.1'
 
-group :worker do
-end
+gem 'thin',         '~> 1.4.1'
+gem 'sinatra',      '~> 1.3.3'
 
-group :network do
-  gem 'redis', '~> 3.0.1'
-end
-
-group :manager do
-  gem 'redis', '~> 3.0.1'
-  gem 'thin', '~> 1.4.1'
-  gem 'sinatra', '~> 1.3.3'
-end
-
-group :test do
-  gem 'minitest', '~> 3.4.0'
-end
+gem 'minitest',     '~> 3.4.0'
+gem 'yard',         '~> 0.8.3'
