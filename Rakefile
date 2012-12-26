@@ -1,6 +1,8 @@
 require 'rake/testtask'
 require 'yard'
 
+task :default => [:test, :doc]
+
 Rake::TestTask.new do |t|
   t.pattern = "spec/**/*_spec.rb"
 end
