@@ -1,4 +1,5 @@
 module Maru
+  # The current version of Maru.
 	VERSION = [1,0,"devel"]
 
 	class << VERSION
