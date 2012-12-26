@@ -40,16 +40,32 @@ module Maru
     # Transfers control to the master and starts it. This method must be
     # run within an EventMachine reactor loop.
     def start
-      @server = EventMachine.start_server @host, @port, Maru::Protocol do |pr|
-        pr.command_acceptor = self
+      @server = EventMachine.start_server @host, @port, Maru::Protocol do |conn|
+        conn.command_acceptor = Client.new(self, conn)
       end
     end
 
-    # @group Commands
+    # Handles a single connection to the master.
+    class Client
+      # @param [Maru::Master] master
+      #   The master for which the connection is managed.
+      # @param [Object] connection
+      #   The connection being managed. Extends {Maru::Protocol}.
+      def initialize(master, connection)
+        @master     = master
+        @connection = connection
+      end
 
-    # A simple ping/pong.
-    def command_PING
-      ["PONG", Time.now.to_i]
+      # @group Commands
+
+      # Simple ping/pong.
+      #
+      # @returns [Array<String,Integer>]
+      #   The literal `"PONG"` followed by the time of receipt in seconds since
+      #   UNIX epoch (1970-01-01 00:00 UTC).
+      def command_PING
+        ["PONG", Time.now.to_i]
+      end
     end
   end
 end
