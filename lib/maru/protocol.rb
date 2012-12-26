@@ -221,6 +221,12 @@ module Maru
       @parse_data  = {}
     end
 
+    # @private
+    def unbind
+      # Try to call #connection_terminated on the command acceptor.
+      @command_acceptor.connection_terminated rescue nil
+    end
+
     # Sends a command upstream. If a block is given, the peer will be notified that
     # a response is expected.
     #
