@@ -109,4 +109,19 @@ describe Maru::Master::Client do
       client.owner.must_equal "jon.dee@example.com"
     end
   end
+
+  describe "#must_be_worker!" do
+    before do
+      @client = Maru::Master::Client.new nil, nil
+    end
+
+    it "accepts workers" do
+      @client.instance_eval { @role = :worker }
+      @client.must_be_worker!
+    end
+
+    it "refuses workers by raising InsufficientCredentialsError" do
+      proc { @client.must_be_worker! }.must_raise InsufficientCredentialsError
+    end
+  end
 end

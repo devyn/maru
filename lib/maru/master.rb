@@ -2,6 +2,10 @@ require 'eventmachine'
 require 'maru/protocol'
 require 'set'
 
+# Raised when there are insufficient credentials to fulfill an operation.
+class InsufficientCredentialsError < StandardError
+end
+
 module Maru
   # Implements the Maru "master" role, which is responsible for managing,
   # dispatching and advertising jobs and collecting their results.
@@ -126,6 +130,17 @@ module Maru
         end
 
         :OK
+      end
+
+      # @group Command helpers
+
+      # Used to ensure that the client is a worker before going through with
+      # an operation.
+      #
+      # @raise [InsufficientCredentialsError] if the client is not a worker.
+      def must_be_worker!
+        raise InsufficientCredentialsError,
+          "You must be a worker to perform that operation." unless @role == :worker
       end
     end
   end
