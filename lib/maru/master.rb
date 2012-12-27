@@ -116,6 +116,9 @@ module Maru
       #   @param [String] owner
       #     An identifying piece of information for the worker's owner or
       #     maintainer. Conventionally an email address.
+      #
+      #   @raise [StandardError] if the identification was impossible for some
+      #     unspecified reason.
       def command_IDENTIFY(role, *args)
         raise StandardError, "Already identified." if @role
 
