@@ -8,6 +8,20 @@ module Maru
     # by {BasicClient} and {BasicClient#command_IDENTIFY} has been invoked
     # with a desire to transition to the `WORKER` role.
     class WorkerClient
+      # @return [Maru::Master] The master to which the connection is established.
+      attr_reader :master
+
+      # @return [Object] A {Maru::Protocol} implementing representation of the
+      #   connection.
+      attr_reader :connection
+
+      # @return [String] The worker's name.
+      attr_reader :name
+
+      # @return [String] Identification for the worker's owner. Often an email
+      #   address.
+      attr_reader :owner
+
       # @param [Master] master
       #   The master for which the connection is being held.
       # @param [EventMachine::Connection] connection
