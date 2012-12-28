@@ -8,14 +8,14 @@ module Maru
       # @return [Maru::Master] The master to which the connection is established.
       attr_reader :master
 
-      # @return [Object] A {Maru::Protocol} implementing representation of the
-      #   connection.
+      # @return [EventMachine::Connection] A {Protocol} implementing
+      #   representation of the connection.
       attr_reader :connection
 
       # @param [Maru::Master] master
       #   The master for which the connection is managed.
-      # @param [Object] connection
-      #   The connection being managed. Extends {Maru::Protocol}.
+      # @param [EventMachine::Connection] connection
+      #   The connection being managed. Extends {Protocol}.
       def initialize(master, connection)
         @master     = master
         @connection = connection

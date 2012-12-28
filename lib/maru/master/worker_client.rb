@@ -11,8 +11,8 @@ module Maru
       # @return [Maru::Master] The master to which the connection is established.
       attr_reader :master
 
-      # @return [Object] A {Maru::Protocol} implementing representation of the
-      #   connection.
+      # @return [EventMachine::Connection] A {Protocol} implementing
+      #   representation of the connection.
       attr_reader :connection
 
       # @return [String] The worker's name.
