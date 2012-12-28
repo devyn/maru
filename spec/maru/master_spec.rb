@@ -36,6 +36,50 @@ describe Maru::Master do
     end
   end
 
+  describe "#worker_ready" do
+    it "registers a worker as being ready for work" do
+      master     = Maru::Master.new
+      our_worker = Object.new
+
+      master.workers.add  our_worker
+      master.worker_ready our_worker
+
+      master.ready_workers.must_include our_worker
+    end
+
+    it "immediately attempts to find work for the worker" # TODO
+  end
+
+  describe "#worker_busy" do
+    it "unregisters a worker as being ready for work" do
+      master     = Maru::Master.new
+      our_worker = Object.new
+
+      master.workers.add       our_worker
+      master.ready_workers.add our_worker
+      master.worker_busy       our_worker
+
+      master.ready_workers.wont_include our_worker
+    end
+
+    it "only affects a single worker" do
+      master           = Maru::Master.new
+      our_worker       = Object.new
+      our_other_worker = Object.new
+
+      master.workers.add       our_worker
+      master.workers.add       our_other_worker
+      master.ready_workers.add our_worker
+      master.ready_workers.add our_other_worker
+      master.worker_busy       our_worker
+
+      master.ready_workers.wont_include our_worker
+      master.ready_workers.must_include our_other_worker
+    end
+
+    it "immediately relinquishes any reserved offerings" # TODO
+  end
+
   it "is responsive when invoked via a real server" do
     master = Maru::Master.new(host: "127.0.0.1", port: 44450)
 
@@ -60,68 +104,6 @@ describe Maru::Master do
           end
         end
       end
-    end
-  end
-end
-
-describe Maru::Master::Client do
-  describe "#connection_terminated" do
-    it "unregisters workers" do
-      master = Minitest::Mock.new
-      client = Maru::Master::Client.new master, nil
-
-      client.instance_eval { @role = :worker }
-
-      master.expect :unregister_worker, nil, [Maru::Master::Client]
-
-      client.connection_terminated
-
-      master.verify
-    end
-  end
-
-  describe "#command_IDENTIFY" do
-    it "refuses unknown roles with ArgumentError" do
-      client = Maru::Master::Client.new nil, nil
-
-      proc { client.command_IDENTIFY "AOI", "sora.1" }.must_raise ArgumentError
-    end
-
-    it "refuses to identify an already identified client" do
-      client = Maru::Master::Client.new nil, nil
-
-      client.instance_eval { @role = :bogus }
-
-      proc { client.command_IDENTIFY "BOGUS2" }.must_raise StandardError
-    end
-
-    it "can register those that identify as WORKERs" do
-      master = Minitest::Mock.new
-      client = Maru::Master::Client.new master, nil
-
-      master.expect :register_worker, nil, [Maru::Master::Client]
-
-      client.command_IDENTIFY "WORKER", "rah.example.com:1", "jon.dee@example.com"
-
-      master.verify
-
-      client.name.must_equal "rah.example.com:1"
-      client.owner.must_equal "jon.dee@example.com"
-    end
-  end
-
-  describe "#must_be_worker!" do
-    before do
-      @client = Maru::Master::Client.new nil, nil
-    end
-
-    it "accepts workers" do
-      @client.instance_eval { @role = :worker }
-      @client.must_be_worker!
-    end
-
-    it "refuses workers by raising InsufficientCredentialsError" do
-      proc { @client.must_be_worker! }.must_raise InsufficientCredentialsError
     end
   end
 end
