@@ -2,6 +2,6 @@
 maru.db
 pid/
 log/
+doc/
 config.ru
 config.yaml
-
