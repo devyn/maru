@@ -2,11 +2,19 @@ require 'minitest/autorun'
 require 'maru/master'
 require 'maru/protocol'
 
+class MockWorker
+  attr_reader :name
+
+  def initialize
+    @name = [%w{Alpha Bravo Charlie Delta Echo}[rand(5)], 2.times.map { rand(16**4).to_s(16) }.join(":")].join(" ")
+  end
+end
+
 describe Maru::Master do
   describe "#register_worker" do
     it "adds a worker to the pool" do
       master     = Maru::Master.new
-      our_worker = Object.new
+      our_worker = MockWorker.new
 
       master.register_worker our_worker
       master.workers.must_include our_worker
@@ -16,7 +24,7 @@ describe Maru::Master do
   describe "#unregister_worker" do
     it "unregisters a worker from the pool" do
       master     = Maru::Master.new
-      our_worker = Object.new
+      our_worker = MockWorker.new
 
       master.workers.add our_worker
       master.unregister_worker our_worker
@@ -25,8 +33,8 @@ describe Maru::Master do
 
     it "only unregisters a single worker from the pool" do
       master           = Maru::Master.new
-      our_worker       = Object.new
-      our_other_worker = Object.new
+      our_worker       = MockWorker.new
+      our_other_worker = MockWorker.new
 
       master.workers.add our_worker
       master.workers.add our_other_worker
@@ -39,7 +47,7 @@ describe Maru::Master do
   describe "#worker_ready" do
     it "registers a worker as being ready for work" do
       master     = Maru::Master.new
-      our_worker = Object.new
+      our_worker = MockWorker.new
 
       master.workers.add  our_worker
       master.worker_ready our_worker
@@ -53,7 +61,7 @@ describe Maru::Master do
   describe "#worker_busy" do
     it "unregisters a worker as being ready for work" do
       master     = Maru::Master.new
-      our_worker = Object.new
+      our_worker = MockWorker.new
 
       master.workers.add       our_worker
       master.ready_workers.add our_worker
@@ -64,8 +72,8 @@ describe Maru::Master do
 
     it "only affects a single worker" do
       master           = Maru::Master.new
-      our_worker       = Object.new
-      our_other_worker = Object.new
+      our_worker       = MockWorker.new
+      our_other_worker = MockWorker.new
 
       master.workers.add       our_worker
       master.workers.add       our_other_worker
