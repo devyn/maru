@@ -17,7 +17,7 @@ module Maru
   # @example Configuring from hash-like object
   #   Maru::Master.new({
   #     "host" => "0.0.0.0",
-  #     "port" => 2931
+  #     "port" => 4450
   #   }).start
   #
   # @example Configuring from command-line arguments
