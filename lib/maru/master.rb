@@ -74,6 +74,14 @@ module Maru
       end
     end
 
+    # Gracefully stops the master.
+    def stop
+      return unless @server
+
+      EventMachine.stop_server @server
+      @server = nil
+    end
+
     # Registers a worker as being connected and available to the master.
     #
     # @param [WorkerClient] worker
