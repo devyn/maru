@@ -1,8 +1,0 @@
-*.swp
-.yardoc/
-maru.db
-pid/
-log/
-doc/
-config.ru
-config.yaml
