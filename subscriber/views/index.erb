@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+
+<html>
+  <body>
+    <ul>
+      <% @tasks.each do |task| %>
+        <li>
+          <dl>
+            <dt>Name</dt>
+            <dd><%= escape_html task.name %></dd>
+            <dt>Jobs</dt>
+            <dd>
+              <ul>
+                <% task.jobs.each do |job| %>
+                  <li><%= escape_html job.name %> <%= escape_html job.type %> <code><%= escape_html job.description %></code> by <%= escape_html job.worker %></li>
+                <% end %>
+              </ul>
+            </dd>
+        </li>
+      <% end %>
+    </ul>
+  </body>
+</html>
