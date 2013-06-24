@@ -3,6 +3,7 @@ require 'fileutils'
 require 'json'
 require 'rack/utils'
 require 'sinatra'
+require 'sinatra/streaming'
 require 'sequel'
 require 'yaml'
 

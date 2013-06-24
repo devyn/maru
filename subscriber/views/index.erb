@@ -1,23 +1,25 @@
 <!DOCTYPE html>
 
 <html>
+  <head>
+    <title>maru subscriber @ <%= escape_html request.host %></title>
+
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+    <link href="main.css" rel="stylesheet" type="text/css"/>
+    <script src="main.js" type="text/javascript"></script>
+  </head>
   <body>
-    <ul>
-      <% @tasks.each do |task| %>
-        <li>
-          <dl>
-            <dt>Name</dt>
-            <dd><%= escape_html task.name %></dd>
-            <dt>Jobs</dt>
-            <dd>
-              <ul>
-                <% task.jobs.each do |job| %>
-                  <li><%= escape_html job.name %> <%= escape_html job.type %> <code><%= escape_html job.description %></code> by <%= escape_html job.worker %></li>
-                <% end %>
-              </ul>
-            </dd>
-        </li>
-      <% end %>
+    <nav>
+      <div id="nav_left">
+        丸 maru
+      </div>
+      <ul id="nav_right">
+        <li>new</li>
+      </ul>
+    </nav>
+    <ul id="tasks">
     </ul>
+    <div id="details">
+    </div>
   </body>
 </html>

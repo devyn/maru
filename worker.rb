@@ -211,7 +211,7 @@ module Maru
 
       job_json = {
         "type" => "me.devyn.maru.Echo",
-        "destination" => "http://localhost:3000/task/4cf9d0007ca1e256ec4fbdf3cf8d6ea8/submit",
+        "destination" => "http://localhost:3000/task/4cf9d0007ca1e256ec4fbdf3cf8d6ea8/submit/#{rand(36**10).to_s(36)}",
         "description" => {
           "external" => {
             "maru.blend" => {"url" => "http://s.devyn.me/maru.blend", "sha256" => "32368540ea4a82330d4fd7f47e1d051df390956ccd53d125e914ec3f156d5b31"}
