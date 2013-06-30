@@ -1,9 +1,17 @@
+#!/usr/bin/env ruby
+
+$:.unshift(File.join(File.dirname(__FILE__), "lib"))
+
 require 'optparse'
 require 'uri'
 require 'eventmachine'
 require 'httpclient'
 require 'fileutils'
 require 'yaml'
+
+require 'maru/version'
+require 'maru/log'
+require 'maru/json_protocol'
 
 module Maru
   class Worker
@@ -12,24 +20,28 @@ module Maru
       "temp_dir"    => "/tmp/maru-worker/MyWorker",
       "plugin_path" => File.expand_path(File.join(File.dirname(__FILE__), "worker/plugins")),
       "plugins"     => [],
+      "networks"    => [],
       "color"       => nil
     }.freeze
 
     class PrerequisiteAcquisitionFailed < StandardError; end
     class PrerequisiteChecksumFailed    < StandardError; end
 
-    class Log
-      def initialize(out, color=nil)
-        @out   = out
-        @color = color.nil? ? out.tty? : color
-      end
-
+    class Log < Maru::Log
       def connected_to_network(name)
         info "Connected to network '\e[35m%s\e[36m'" % name
       end
 
+      def disconnected_from_network(name)
+        warn "Disconnected from network '\e[35m%s\e[33m'" % name
+      end
+
       def network_connection_failed(name, msg)
         warn "Failed to connect to network '\e[35m%s\e[33m': %s" % [name, msg]
+      end
+
+      def exiting
+        info "Exiting"
       end
 
       def job_received(network, job)
@@ -75,34 +87,6 @@ module Maru
       def job_warn(msg, options={})
         warn "  #{msg}", options
       end
-
-      def info(msg, options={})
-        if @color
-          @out << "\e[1m>> \e[0;36m#{msg}\e[0m"
-        else
-          @out << ">> #{msg.gsub(/\e\[\d{1,2}(?:;\d{1,2})?m/, '')}"
-        end
-
-        if options[:newline] == false
-          @out.flush
-        else
-          @out << "\n"
-        end
-      end
-
-      def warn(msg, options={})
-        if @color
-          @out << "\e[1m!! \e[0;33m#{msg}\e[0m"
-        else
-          @out << "!! #{msg.gsub(/\e\[\d{1,2}(?:;\d{1,2})?m/, '')}"
-        end
-
-        if options[:newline] == false
-          @out.flush
-        else
-          @out << "\n"
-        end
-      end
     end
 
     class Plugin
@@ -117,13 +101,15 @@ module Maru
     end
 
     class Job
-      attr_reader :type, :destination, :description
+      attr_reader :id, :type, :destination, :description
 
-      attr_accessor :prerequisites
+      attr_accessor :prerequisites, :thread
 
-      def initialize(job_json, worker, &on_finish)
+      def initialize(job_json, network, worker, &on_finish)
+        @network       = network
         @worker        = worker
 
+        @id            = job_json["id"]
         @type          = job_json["type"]
         @destination   = job_json["destination"]
         @description   = job_json["description"]
@@ -131,6 +117,8 @@ module Maru
         @prerequisites = {}
 
         @results       = {}
+
+        @incomplete    = true
 
         @on_finish     = on_finish
       end
@@ -151,44 +139,128 @@ module Maru
         @results[filename] = string_or_io
       end
 
-      def submit
-        @worker.log.job_uploading_to(@destination)
+      def reject
+        if @incomplete
+          @incomplete = false
 
-        # TODO: errors should result in submission being queued, really
+          EventMachine.next_tick do
+            @network.send_command "reject", @id
 
-        begin
-          res = @worker.http.post(
-            @destination,
-            @results.map { |k, v|
-              ["results[#{k}]", v]
-            },
-            {
-              "Content-Type"           => "multipart/form-data",
-              "User-Agent"             => "maru",
-              "X-Maru-Job-Type"        => @type,
-              "X-Maru-Job-Description" => @description,
-              "X-Maru-Worker-Id"       => @worker.name
-            }
-          )
-        rescue
-          error("while trying to submit results: #{$!.message}")
+            @thread.kill
+          end
         end
+      end
 
-        if res.code == 200
-          @worker.log.job_completed
-          @on_finish.(:success)
-        else
-          error("while trying to submit results: HTTP error #{res.code}: #{res.reason}")
+      def submit
+        if @incomplete
+          @worker.log.job_uploading_to(@destination)
+
+          # TODO: errors should result in submission being queued, really
+
+          begin
+            res = @worker.http.post(
+              @destination,
+              @results.map { |k, v|
+                ["results[#{k}]", v]
+              },
+              {
+                "Content-Type"           => "multipart/form-data",
+                "User-Agent"             => "maru",
+                "X-Maru-Job-Type"        => @type,
+                "X-Maru-Job-Description" => @description,
+                "X-Maru-Worker-Id"       => @worker.name
+              }
+            )
+          rescue
+            error("while trying to submit results: #{$!.message}")
+          end
+
+          if res.code == 200
+            @incomplete = false
+
+            EventMachine.next_tick do
+              @network.send_command("completed", @id)
+
+              @worker.log.job_completed
+              @on_finish.(:completed)
+            end
+          else
+            error("while trying to submit results: HTTP error #{res.code}: #{res.reason}")
+          end
         end
       end
 
       def error(msg)
-        @worker.log.job_error(msg)
-        @on_finish.(:error, msg)
+        if @incomplete
+          @incomplete = false
+
+          EventMachine.next_tick do
+            @network.send_command "failed", @id, msg
+
+            @worker.log.job_error(msg)
+            @on_finish.(:failed, msg)
+          end
+        end
       end
     end
 
-    attr_reader :config, :name, :log, :http
+    module NetworkClient
+      include Maru::JSONProtocol
+
+      attr_accessor :worker, :work_available
+
+      attr_reader :name, :info
+
+      def initialize(worker, host, port)
+        @worker = worker
+        @host   = host
+        @port   = port
+
+        @work_available = true
+        @registered     = false
+      end
+
+      def unbind
+        if @registered
+          @worker.unregister_network self
+          @registered = false
+        else
+          @worker.log.network_connection_failed "#@host:#@port", "could not connect"
+        end
+
+        # retry in 10 seconds
+        EventMachine.add_timer(10) do
+          EventMachine.reconnect(@host, @port, self)
+        end
+      end
+
+      def receive_command(result, name, *args)
+        case name
+        when "hello"
+          type, @name, @info = args
+
+          # FIXME: temporary fake authentication
+          send_command("_new_session", :worker, {name: @worker.name}).callback do
+            @worker.register_network self
+            @registered = true
+          end.errback do |err|
+            @worker.log.network_connection_failed @name, err["message"]
+          end
+
+          result.succeed(nil)
+        when "job_available"
+          @work_available = true
+
+          if @worker.waiting_for_work
+            @worker.get_work
+          end
+
+          result.succeed(nil)
+        end
+      end
+    end
+
+    attr_reader :config, :name, :log, :http, :waiting_for_work
 
     def initialize(config={})
       @config = DEFAULT_CONFIG.merge(config)
@@ -199,34 +271,95 @@ module Maru
 
       @http = HTTPClient.new
 
+      @waiting_for_work = true
+
       @plugins = {}
+
+      @networks = []
 
       Plugin::PLUGINS.each do |plugin|
         @plugins[plugin.job_type] = plugin.new(@config)
       end
     end
 
+    def register_network(network)
+      @networks.unshift network
+
+      @log.connected_to_network network.name
+
+      if @waiting_for_work
+        get_work
+      end
+    end
+
+    def unregister_network(network)
+      @log.disconnected_from_network network.name
+
+      @networks.delete network
+    end
+
     def run
-      @log.connected_to_network "Dummy"
+      [:INT, :TERM].each do |signal|
+        trap signal do
+          @log.exiting
 
-      job_json = {
-        "type" => "me.devyn.maru.Echo",
-        "destination" => "http://localhost:3000/task/4cf9d0007ca1e256ec4fbdf3cf8d6ea8/submit/#{rand(36**10).to_s(36)}",
-        "description" => {
-          "external" => {
-            "maru.blend" => {"url" => "http://s.devyn.me/maru.blend", "sha256" => "32368540ea4a82330d4fd7f47e1d051df390956ccd53d125e914ec3f156d5b31"}
-          },
-          "results" => {
-            "hello.txt" => "Hello world!"
-          }
-        }
-      }
+          if @job
+            @job.reject
+          end
 
-      @log.job_received "Dummy", job_json
+          EventMachine.stop
+        end
+      end
 
-      prereq_results = acquire_prerequisites(job_json)
+      @config["networks"].each do |network|
+        host, port = network.split(":")
+        port       = port ? port.to_i : 8490
 
-      process_job(job_json, prereq_results)
+        EventMachine.connect(host, port, NetworkClient, self, host, port)
+      end
+    end
+
+    def get_work
+      @waiting_for_work = false
+
+      # only try once for each network
+      remaining = @networks.count
+
+      try = proc do
+        remaining -= 1
+
+        network = @networks.shift
+        @networks << network
+
+        if network.work_available
+          # @plugins.keys = list of job types
+          res = network.send_command "get", *@plugins.keys
+
+          res.callback do |job_json|
+            @log.job_received network.name, job_json
+
+            prereq_results = acquire_prerequisites(job_json)
+            process_job(job_json, network, prereq_results)
+          end
+
+          res.errback do |err|
+            p err
+            network.work_available = false
+
+            if remaining > 0
+              try.()
+            else
+              @waiting_for_work = true
+            end
+          end
+        end
+      end
+
+      if remaining > 0
+        try.()
+      else
+        @waiting_for_work = true
+      end
     end
 
     def acquire_prerequisites(job_json)
@@ -283,18 +416,19 @@ module Maru
       return prereq_results
     end
 
-    def process_job(job_json, prereq_results)
+    def process_job(job_json, network, prereq_results)
       temp_path = File.join(@config["temp_dir"], "jobs", "%032x" % rand(16**32))
 
-      @job = Job.new(job_json, self) do
+      @job = Job.new(job_json, network, self) do |status, error_message|
         @job = nil
 
-        #EM.next_tick { self.get_work } # or something
+        #get_work
+        EM.add_timer(1) { get_work } # FIXME
       end
 
       @job.prerequisites = prereq_results
 
-      @job_thread = Thread.start do
+      @job.thread = Thread.start do
         begin
           FileUtils.mkdir_p temp_path
 
@@ -360,7 +494,7 @@ if __FILE__ == $0
   end
 
   opts.on_tail "-v", "--version", "Print version information and exit" do
-    #puts Maru::VERSION
+    puts "maru worker #{Maru::VERSION}"
     exit
   end
 
