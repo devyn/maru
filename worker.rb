@@ -343,7 +343,6 @@ module Maru
           end
 
           res.errback do |err|
-            p err
             network.work_available = false
 
             if remaining > 0

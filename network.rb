@@ -15,7 +15,7 @@ require 'maru/json_protocol'
 
 module Maru
   class Network
-    attr_reader :config, :redis, :key_prefix, :name, :log
+    attr_reader :config, :redis, :key_prefix, :name, :log, :waitlist
 
     DEFAULT_CONFIG = {
       "name"  => "mynetwork",
@@ -24,7 +24,7 @@ module Maru
       "color" => nil,
       "redis" => {
         "host" => "localhost",
-        "port" => 6380,
+        "port" => 6379,
         "key_prefix" => "maru.network.mynetwork."
       }
     }.freeze
@@ -36,6 +36,14 @@ module Maru
           job_json["type"],
           URI.parse(job_json["destination"]).host,
           worker_name
+        ]
+      end
+
+      def submitted(job_json)
+        info "Job \e[1m%i\e[0;36m (\e[0;1m%s\e[0;36m → \e[35m%s\e[36m) submitted" % [
+          job_json["id"],
+          job_json["type"],
+          URI.parse(job_json["destination"]).host
         ]
       end
 
@@ -63,11 +71,13 @@ module Maru
 
       @log = Log.new(STDOUT, @config["color"])
 
-      @redis = Redis.new(@config["redis"])
+      @redis     = Redis.new(@config["redis"])
+      @redis_sub = Redis.new(@config["redis"])
 
       @key_prefix = @config["redis"]["key_prefix"] || "maru.network.#{@config["name"]}."
 
-      @clients = Set.new
+      @clients  = Set.new
+      @waitlist = {}
     end
 
     def run
@@ -81,40 +91,100 @@ module Maru
         end
 
         @server = EventMachine.start_server(@config["host"], @config["port"], Client, self)
+
+        subscribe_redis
+      end
+    end
+
+    def subscribe_redis
+      Thread.start do
+        @redis_sub.subscribe(key("available_jobs")) do |on|
+          on.message do |channel,message|
+            case channel
+            when key("available_jobs")
+              id, type = message.split(":")
+
+              if @waitlist[type]
+                @waitlist[type].each do |client|
+                  client.send_command "job_available"
+                end
+                @waitlist.delete type
+              end
+            end
+          end
+        end
       end
     end
 
     def get(worker_name, types)
-      if types.include? "me.devyn.maru.Echo"
-        job_json = {
-          "id" => 3201,
-          "type" => "me.devyn.maru.Echo",
-          "destination" => "http://localhost:3000/task/52d06e221932fa70206e7719d8f06d45/submit",
-          "description" => {
-            "results" => {
-              "18729038" => "2*23*407153"
-            }
-          }
-        }
+      types = types.dup
 
-        @log.assigning job_json, worker_name
+      until types.empty?
+        type = types.delete_at rand(types.length)
+        id = @redis.spop key("available_jobs:#{type}")
+        if id
+          @redis.sadd key("assigned_jobs:#{worker_name}"), id
 
-        job_json
-      else
-        nil
+          job = JSON.parse(@redis.hget(key("jobs"), id))
+
+          @log.assigning job, worker_name
+
+          return job
+        end
       end
+      nil
+    end
+
+    def submit(job_json)
+      job_json["id"] = id = @redis.incr(key("next_job_id")).to_i
+
+      @redis.multi do
+        @redis.hset key("jobs"), id, job_json.to_json
+        @redis.sadd key("available_jobs:#{job_json["type"]}"), id
+        @redis.publish key("available_jobs"), "#{id}:#{job_json["type"]}"
+      end
+
+      @log.submitted job_json
+
+      return id
     end
 
     def completed(worker_name, id)
-      @log.completed(worker_name, id)
+      if @redis.srem(key("assigned_jobs:#{worker_name}"), id) == 1
+        @redis.multi do
+          @redis.hdel(key("jobs"), id)
+          @redis.sadd(key("completed_jobs"), id)
+        end
+
+        @log.completed(worker_name, id)
+        true
+      else
+        false
+      end
     end
 
     def failed(worker_name, id, message)
-      @log.failed(worker_name, id, message)
+      if @redis.srem(key("assigned_jobs:#{worker_name}"), id) == 1
+        @redis.hset(key("failed_jobs"), id, message)
+
+        @log.failed(worker_name, id, message)
+        true
+      else
+        false
+      end
     end
 
     def reject(worker_name, id)
-      @log.reject(worker_name, id)
+      if @redis.srem(key("assigned_jobs:#{worker_name}"), id) == 1
+        job_json = JSON.parse(@redis.hget(key("jobs"), id))
+
+        @redis.sadd(key("available_jobs:#{job_json["type"]}"), id)
+
+        @log.reject(worker_name, id)
+        true
+      else
+        false
+      end
     end
 
     def register_client(client)
@@ -151,6 +221,7 @@ module Maru
         when :worker
           receive_worker_command(result, name, *args)
         when :producer
+          receive_producer_command(result, name, *args)
         else
           case name
           when "_new_session"
@@ -168,10 +239,8 @@ module Maru
               @name = options["name"]
               result.succeed(nil)
             when "producer"
-              # TODO: implement producer
-
-              #@type = :producer
-              result.fail(name: "NotImplemented", message: "producers are not implemented yet")
+              @type = :producer
+              result.succeed(nil)
             else
               result.invalid_argument! "must be worker or producer"
             end
@@ -189,6 +258,11 @@ module Maru
           if job
             result.succeed(job)
           else
+            args.each do |type|
+              @network.waitlist[type] ||= Set.new
+              @network.waitlist[type] << self
+            end
+
             result.fail(name: "NoJobsAvailable", message: "there are no jobs available for the selected type")
           end
         when "completed"
@@ -204,6 +278,22 @@ module Maru
           result.unrecognized_command!
         end
       end
+
+      def receive_producer_command(result, name, *args)
+        case name
+        when "submit"
+          id = @network.submit(args[0])
+          result.succeed(id)
+        else
+          result.unrecognized_command!
+        end
+      end
+    end
+
+    private
+
+    def key(string)
+      @key_prefix.to_s + string
     end
   end
 end
