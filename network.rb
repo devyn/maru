@@ -136,11 +136,26 @@ module Maru
     end
 
     def submit(job_json)
+      # ensure destination URI is valid
+
+      begin
+        URI.parse(job_json["destination"])
+      rescue
+        return nil
+      end
+
+      # get next ID
+
       job_json["id"] = id = @redis.incr(key("next_job_id")).to_i
 
       @redis.multi do
+        # add to job description map
         @redis.hset key("jobs"), id, job_json.to_json
+
+        # place in pool for workers who are looking for jobs of this type
         @redis.sadd key("available_jobs:#{job_json["type"]}"), id
+
+        # notify network instances of the new job
         @redis.publish key("available_jobs"), "#{id}:#{job_json["type"]}"
       end
 
@@ -283,7 +298,12 @@ module Maru
         case name
         when "submit"
           id = @network.submit(args[0])
-          result.succeed(id)
+
+          if id
+            result.succeed(id)
+          else
+            result.error(name: "InvalidJob", message: "job data malformed")
+          end
         else
           result.unrecognized_command!
         end

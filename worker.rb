@@ -394,7 +394,7 @@ module Maru
                 digest << chunk
               end
             end
-          rescue HTTPClient::BadResponseError
+          rescue
             @log.job_prerequisite_failed prereq[:url]
 
             File.unlink(path)
@@ -421,11 +421,16 @@ module Maru
       @job = Job.new(job_json, network, self) do |status, error_message|
         @job = nil
 
-        #get_work
-        EM.add_timer(1) { get_work } # FIXME
+        get_work
       end
 
       @job.prerequisites = prereq_results
+
+      begin
+        URI.parse(@job.destination)
+      rescue
+        @job.error("destination URI invalid")
+      end
 
       @job.thread = Thread.start do
         begin
