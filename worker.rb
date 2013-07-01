@@ -139,12 +139,16 @@ module Maru
         @results[filename] = string_or_io
       end
 
-      def reject
+      def reject(&block)
         if @incomplete
           @incomplete = false
 
           EventMachine.next_tick do
-            @network.send_command "reject", @id
+            @network.send_command("reject", @id).callback {
+              block.() if block
+            }.errback {
+              block.() if block
+            }
 
             @thread.kill
           end
@@ -303,11 +307,16 @@ module Maru
         trap signal do
           @log.exiting
 
-          if @job
-            @job.reject
+          # In Ruby 2.0, for safety, this must be done on another thread.
+          Thread.start do
+            if @job
+              @job.reject {
+                EventMachine.stop
+              }
+            else
+              EventMachine.stop
+            end
           end
-
-          EventMachine.stop
         end
       end
 

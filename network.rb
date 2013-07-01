@@ -86,7 +86,10 @@ module Maru
           trap signal do
             @log.exiting
 
-            EventMachine.stop
+            # New thread for Ruby 2.0
+            Thread.start do
+              EventMachine.stop
+            end
           end
         end
 
@@ -165,7 +168,7 @@ module Maru
     end
 
     def completed(worker_name, id)
-      if @redis.srem(key("assigned_jobs:#{worker_name}"), id) == 1
+      if @redis.srem(key("assigned_jobs:#{worker_name}"), id)
         @redis.multi do
           @redis.hdel(key("jobs"), id)
           @redis.sadd(key("completed_jobs"), id)
@@ -179,7 +182,7 @@ module Maru
     end
 
     def failed(worker_name, id, message)
-      if @redis.srem(key("assigned_jobs:#{worker_name}"), id) == 1
+      if @redis.srem(key("assigned_jobs:#{worker_name}"), id)
         @redis.hset(key("failed_jobs"), id, message)
 
         @log.failed(worker_name, id, message)
@@ -190,7 +193,7 @@ module Maru
     end
 
     def reject(worker_name, id)
-      if @redis.srem(key("assigned_jobs:#{worker_name}"), id) == 1
+      if @redis.srem(key("assigned_jobs:#{worker_name}"), id)
         job_json = JSON.parse(@redis.hget(key("jobs"), id))
 
         @redis.sadd(key("available_jobs:#{job_json["type"]}"), id)
@@ -200,6 +203,10 @@ module Maru
       else
         false
       end
+    rescue
+      p $!
+      puts $!.backtrace
+      raise $!
     end
 
     def register_client(client)
@@ -283,12 +290,18 @@ module Maru
         when "completed"
           id = args[0]
           @network.completed(@name, id)
+
+          result.succeed(nil)
         when "failed"
           id, message = args
           @network.failed(@name, id, message)
+
+          result.succeed(nil)
         when "reject"
           id = args[0]
           @network.reject(@name, id)
+
+          result.succeed(nil)
         else
           result.unrecognized_command!
         end
@@ -302,7 +315,7 @@ module Maru
           if id
             result.succeed(id)
           else
-            result.error(name: "InvalidJob", message: "job data malformed")
+            result.fail(name: "InvalidJob", message: "job data malformed")
           end
         else
           result.unrecognized_command!
