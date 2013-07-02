@@ -68,6 +68,8 @@ function create_task_element(task) {
   insert_div_class_text("task_speed", "", task.element);
   insert_div_class_text("clear_both", null, task.element);
 
+  update_task_speed(task);
+
   var progress_bar  = insert_div_class_text("progress_bar", null, task.element);
   var progress_fill = insert_div_class_text("progress_fill", null, progress_bar);
 
@@ -88,6 +90,18 @@ function create_task_element(task) {
   });
 
   $("tasks").insertBefore(task.element, $("tasks").firstChild);
+}
+
+function update_task_speed(task) {
+  var nearest_job  = task.recent_jobs[0]
+    , farthest_job = task.recent_jobs[task.recent_jobs.length - 1];
+
+  if (nearest_job && farthest_job) {
+    var farthest_time = Date.parse(farthest_job.submitted_at)
+      , speed = 1000 / ((Date.now() - farthest_time) / task.recent_jobs.length) * 60 * 60;
+
+    task.element.getElementsByClassName("task_speed")[0].textContent = speed.toFixed(2) + " jobs/h";
+  }
 }
 
 function select_task(task) {
@@ -234,6 +248,8 @@ function tasks_jobsubmitted(e) {
 
   task.recent_jobs.unshift(data);
 
+  update_task_speed(task);
+
   if (selected_task_id === task.id) {
     var job_el = prepend_job_element(data);
 
@@ -247,7 +263,7 @@ function tasks_jobsubmitted(e) {
 
     setTimeout(function () {
       task.element.getElementsByClassName("progress_fill")[0].style.width = percent.toString() + "%";
-    }, 0); // next tick
+    }, 10);
 
     task.element.getElementsByClassName("progress_text")[0].textContent = 
       "" + task.submitted_jobs + "/" + task.total_jobs + " completed (" + percent.toFixed(2) + "%)";

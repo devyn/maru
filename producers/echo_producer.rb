@@ -18,6 +18,8 @@ result_sha256 = nil
 host = "localhost"
 port = 8490
 
+repeat = 1
+
 opts = OptionParser.new
 
 opts.on "-N", "--network HOST[:PORT]", "Network address" do |hostport|
@@ -60,6 +62,10 @@ opts.on "--external URL", "Add an external result" do |url|
   end
 end
 
+opts.on "--repeat N", "Number of times to submit the job" do |number|
+  repeat = number.to_i
+end
+
 opts.on_tail "-h", "--help", "Print this message and exit" do
   puts opts
   exit
@@ -69,4 +75,6 @@ opts.parse!(ARGV)
 
 producer = Maru::Producer.new(host, port)
 
-producer.submit job
+repeat.times {
+  producer.submit job
+}
