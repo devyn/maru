@@ -11,8 +11,14 @@ module Maru
         @blender_executable = `which blender`.strip
       end
 
-      if not File.executable? @blender_executable
-        raise "org.blender.Render: not an executable: #@blender_executable"
+      if not File.file? @blender_executable
+        raise "org.blender.Render: no such file: #@blender_executable"
+      end
+
+      unless RUBY_PLATFORM =~ /mingw/i
+        if not File.executable? @blender_executable
+          raise "org.blender.Render: not an executable: #@blender_executable"
+        end
       end
     end
 
