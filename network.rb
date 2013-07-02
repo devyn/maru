@@ -33,7 +33,7 @@ module Maru
 
     class Log < Maru::Log
       def assigning(job_json, worker_name)
-        info "Assigning job \e[1m%i\e[0;36m (\e[0;1m%s\e[0;36m → \e[35m%s\e[36m) to \e[35m%s" % [
+        info "Assigning job \e[1m%i\e[0;36m (\e[0;1m%s\e[0;36m -> \e[35m%s\e[36m) to \e[35m%s" % [
           job_json["id"],
           job_json["type"],
           URI.parse(job_json["destination"]).host,
@@ -42,7 +42,7 @@ module Maru
       end
 
       def submitted(job_json)
-        info "Job \e[1m%i\e[0;36m (\e[0;1m%s\e[0;36m → \e[35m%s\e[36m) submitted" % [
+        info "Job \e[1m%i\e[0;36m (\e[0;1m%s\e[0;36m -> \e[35m%s\e[36m) submitted" % [
           job_json["id"],
           job_json["type"],
           URI.parse(job_json["destination"]).host

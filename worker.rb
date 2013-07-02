@@ -47,7 +47,7 @@ module Maru
       end
 
       def job_received(network, job)
-        info "Received job from '\e[35m%s\e[36m': \e[0;1m%s \e[0;36m(→ \e[35m%s\e[36m)" % [
+        info "Received job from '\e[35m%s\e[36m': \e[0;1m%s \e[0;36m(-> \e[35m%s\e[36m)" % [
           network,
           job["type"],
           URI.parse(job["destination"]).host
