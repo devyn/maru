@@ -8,6 +8,7 @@ require 'optparse'
 require 'uri'
 require 'eventmachine'
 require 'httpclient'
+require 'openssl'
 require 'fileutils'
 require 'yaml'
 
@@ -276,6 +277,8 @@ module Maru
       @log = Log.new(STDOUT, @config["color"])
 
       @http = HTTPClient.new
+
+      @http.ssl_config.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
       @waiting_for_work = true
 
