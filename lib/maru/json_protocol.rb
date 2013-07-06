@@ -12,6 +12,10 @@ module Maru
       def invalid_argument!(msg="invalid argument")
         self.fail(name: "InvalidArgument", message: msg)
       end
+
+      def forbidden!(msg="the operation is forbidden")
+        self.fail(name: "Forbidden", message: msg)
+      end
     end
 
     def post_init
@@ -19,6 +23,10 @@ module Maru
       @command_results = {}
       @next_id         = 0
 
+      start_tls verify_peer: false
+    end
+
+    def ssl_handshake_completed
       if defined?(post_protocol_init)
         post_protocol_init
       end
@@ -60,9 +68,16 @@ module Maru
             else
               @command_results[input["reply"]].succeed input["result"]
             end
+          elsif input["critical"]
+            close_connection
+            handle_critical(input["critical"])
           end
         end
       end
+    end
+
+    def handle_critical(msg)
+      # Default implementation: do nothing
     end
 
     def send_command(name, *args)
@@ -71,6 +86,11 @@ module Maru
       send_data({command: name, arguments: args, id: id}.to_json << "\n")
 
       return(@command_results[id] = Result.new)
+    end
+
+    def critical(msg)
+      send_data({critical: msg.to_s}.to_json << "\n")
+      close_connection_after_writing
     end
   end
 end

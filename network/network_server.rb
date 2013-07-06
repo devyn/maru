@@ -2,7 +2,7 @@
 
 # -*- encoding: utf-8 -*-
 
-$:.unshift(File.join(File.dirname(__FILE__), "lib"))
+$:.unshift(File.join(File.dirname(__FILE__), "../lib"))
 
 require 'eventmachine'
 require 'yaml'
@@ -14,6 +14,7 @@ require 'uri'
 require 'maru/version'
 require 'maru/log'
 require 'maru/json_protocol'
+require 'maru/authentication'
 
 module Maru
   class Network
@@ -118,6 +119,16 @@ module Maru
             end
           end
         end
+      end
+    end
+
+    def lookup_client(client_name)
+      client = @redis.hget(key("clients"), client_name)
+
+      if client
+        JSON.parse(client)
+      else
+        nil
       end
     end
 
@@ -233,7 +244,7 @@ module Maru
       def post_protocol_init
         @network.register_client self
 
-        send_command "hello", :network, @network.name, {}
+        send_command "hello", type: "network", name: @network.name, extensions: []
       end
 
       def unbind
@@ -248,25 +259,55 @@ module Maru
           receive_producer_command(result, name, *args)
         else
           case name
-          when "_new_session"
-            # FIXME: temporary fake authentication
+          when "hello"
+            hello = args[0]
 
-            type, options = args
+            return result.invalid_argument!("name not specified") unless name = hello["name"]
+            return result.invalid_argument!("type not specified") unless type = hello["type"]
 
-            options ||= {}
+            unless %w{worker producer}.include? hello["type"]
+              return result.invalid_argument!("unsupported connection type")
+            end
 
-            case type
-            when "worker"
-              result.invalid_argument! "must provide worker name" unless options["name"]
+            @hello = hello
 
-              @type = :worker
-              @name = options["name"]
-              result.succeed(nil)
-            when "producer"
-              @type = :producer
-              result.succeed(nil)
+            # If this returns nil, the client name is unknown, but we mustn't make that obvious
+            @info = @network.lookup_client(hello["name"])
+
+            # Send our challenge
+
+            challenge = Maru::Authentication::Challenge.new(@info["key"]) if @info
+
+            send_command("challenge", challenge.to_s).callback { |response|
+              if @info and challenge.verify(response)
+                @name = @hello["name"]
+
+                if @info["permissions"].include? @hello["type"]
+                  # Authentication is successful. Enable client.
+                  @type = @hello["type"].to_sym
+                else
+
+                end
+              else
+                # Not successful. Close connection.
+                critical :AuthenticationFailure
+              end
+            }
+
+            result.succeed(nil)
+          when "challenge"
+            if @hello
+              return result.invalid_argument!("challenge required") unless challenge = args[0]
+
+              # Generate response to challenge.
+              # The way authentication works in maru is that both sides
+              # challenge a shared key to prove the identity of the other
+              # before continuing.
+
+              result.succeed(Maru::Authentication.respond(challenge, @key))
             else
-              result.invalid_argument! "must be worker or producer"
+              # `hello` must be sent first
+              result.unrecognized_command!
             end
           else
             result.unrecognized_command!

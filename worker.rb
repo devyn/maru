@@ -15,6 +15,7 @@ require 'yaml'
 require 'maru/version'
 require 'maru/log'
 require 'maru/json_protocol'
+require 'maru/authentication'
 
 module Maru
   class Worker
@@ -175,7 +176,8 @@ module Maru
                 "User-Agent"             => "maru",
                 "X-Maru-Job-Type"        => @type,
                 "X-Maru-Job-Description" => @description,
-                "X-Maru-Worker-Id"       => @worker.name
+                "X-Maru-Worker-Id"       => @network.client_name,
+                "X-Maru-Network-Id"      => @network.name
               }
             )
           rescue
@@ -216,45 +218,89 @@ module Maru
 
       attr_accessor :worker, :work_available
 
-      attr_reader :name, :info
+      attr_reader :name, :client_name, :extensions
 
-      def initialize(worker, host, port)
-        @worker = worker
-        @host   = host
-        @port   = port
+      def initialize(worker, host, port, client_name, key)
+        @worker      = worker
+        @host        = host
+        @port        = port
+        @client_name = client_name
+        @key         = key
 
         @work_available = true
         @registered     = false
+      end
+
+      def post_protocol_init
+        send_command "hello", name: @client_name, type: "worker", extensions: []
       end
 
       def unbind
         if @registered
           @worker.unregister_network self
           @registered = false
-        else
-          @worker.log.network_connection_failed "#@host:#@port", "could not connect"
         end
 
-        # retry in 10 seconds
-        EventMachine.add_timer(10) do
-          EventMachine.reconnect(@host, @port, self)
+        if @critical
+          if @no_retry
+            @worker.log.network_connection_failed @name, "critical error: #@critical. Will not attempt to reconnect."
+          else
+            @worker.log.network_connection_failed @name, "critical error: #@critical. Will retry in 10 seconds."
+
+            EventMachine.add_timer(10) do
+              EventMachine.reconnect(@host, @port, self)
+            end
+          end
+
+          @critical = nil
+        else
+          unless @no_retry
+            @worker.log.network_connection_failed "#@host:#@port", "could not connect. Will retry in 10 seconds."
+
+            EventMachine.add_timer(10) do
+              EventMachine.reconnect(@host, @port, self)
+            end
+          end
         end
       end
 
       def receive_command(result, name, *args)
         case name
         when "hello"
-          type, @name, @info = args
+          @hello = args[0]
 
-          # FIXME: temporary fake authentication
-          send_command("_new_session", :worker, {name: @worker.name}).callback do
-            @worker.register_network self
-            @registered = true
-          end.errback do |err|
-            @worker.log.network_connection_failed @name, err["message"]
+          @type, @name, @extensions = @hello["type"], @hello["name"], @hello["extensions"]
+
+          if @type != "network"
+            @worker.log.network_connection_failed "#@host:#@port", "remote is not a network. Will not attempt to reconnect."
+            @no_retry = true
+
+            close_connection
           end
 
+          # Send challenge to prove that the network knows our shared key
+
+          challenge = Maru::Authentication::Challenge.new(@key)
+
+          send_command("challenge", challenge.to_s).callback { |response|
+            if !challenge.verify(response)
+              @worker.log.network_connection_failed "#@host:#@port", "network failed to prove its authenticity! Will not attempt to reconnect."
+              @no_retry = true
+
+              close_connection
+            end
+          }
+
           result.succeed(nil)
+        when "challenge"
+          result.succeed(Maru::Authentication.respond(args[0], @key))
+
+          # Everything looks good! Continue.
+          #
+          # Possible TODO: Ensure the network's challenge has gone okay first as well somehow.
+          #                Might not be an issue.
+          @worker.register_network self
+          @registered = true
         when "job_available"
           @work_available = true
 
@@ -264,6 +310,15 @@ module Maru
 
           result.succeed(nil)
         end
+      end
+
+      def handle_critical(msg)
+        @critical = msg
+      end
+
+      def disconnect
+        @no_retry = true
+        close_connection_after_writing
       end
     end
 
@@ -316,9 +371,11 @@ module Maru
           Thread.start do
             if @job
               @job.reject {
+                @networks.each(&:disconnect)
                 EventMachine.stop
               }
             else
+              @networks.each(&:disconnect)
               EventMachine.stop
             end
           end
@@ -326,10 +383,12 @@ module Maru
       end
 
       @config["networks"].each do |network|
-        host, port = network.split(":")
-        port       = port ? port.to_i : 8490
+        host, port  = network["host"].split(":")
+        port        = port ? port.to_i : 8490
+        key         = network["key"]
+        client_name = network["client_name"] || @name
 
-        EventMachine.connect(host, port, NetworkClient, self, host, port)
+        EventMachine.connect(host, port, NetworkClient, self, host, port, client_name, key)
       end
     end
 
