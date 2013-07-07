@@ -262,8 +262,8 @@ module Maru
           when "hello"
             hello = args[0]
 
-            return result.invalid_argument!("name not specified") unless name = hello["name"]
-            return result.invalid_argument!("type not specified") unless type = hello["type"]
+            return result.invalid_argument!("name not specified") unless hello["name"]
+            return result.invalid_argument!("type not specified") unless hello["type"]
 
             unless %w{worker producer}.include? hello["type"]
               return result.invalid_argument!("unsupported connection type")
