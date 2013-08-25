@@ -1,0 +1,38 @@
+<% if @target_user == @user or @user.is_admin? %>
+  <form method="POST">
+    <div>
+      <label for="client_name">Client name:</label>
+      <span class="username_prefix"><%= escape_html @target_user.name %>/</span>
+      <input name="client_name" />
+    </div>
+    <div>
+      <label for="permissions">Permissions (comma separated):</label>
+      <input name="permissions" />
+    <div>
+      <input type="submit" value="Add a new client"></input>
+    </div>
+  </form>
+<% end %>
+
+<ul class="clients">
+  <% @target_user.clients.each do |client| %>
+    <li>
+      <dl>
+        <dt>Client name</dt>
+        <dd class="client_name"><%= escape_html client.name %></dd>
+
+        <% if @target_user == @user or @user.is_admin? %>
+          <dt>Key</dt>
+          <dd class="client_key"><%= escape_html client.key %></dd>
+        <% end %>
+
+        <dt>Permissions</dt>
+        <ul class="client_permissions">
+          <% client.permissions.each do |permission| %>
+            <li><%= escape_html permission %></li>
+          <% end %>
+        </ul>
+      </dl>
+    </li>
+  <% end %>
+</ul>

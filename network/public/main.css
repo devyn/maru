@@ -1,0 +1,44 @@
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+ background-color: #442266;
+ font-family: sans-serif;
+}
+
+#layout_mini {
+}
+
+#layout_max {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+
+  width: 60em;
+  margin: auto;
+}
+
+#layout_max #header {
+  background-image: url(/header.png);
+  background-repeat: no-repeat;
+  background-color: #5f4d66;
+
+  width: auto;
+  height: 128px;
+  padding: 0;
+  margin: 0;
+
+  border-bottom: 3px solid #a26eb2;
+}
+
+#layout_max #content {
+  background-color: #edd4ff;
+  padding: 30px;
+}
+
+dt {
+  font-weight: bold;
+}

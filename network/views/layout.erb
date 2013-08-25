@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title><%= settings.app_config["name"] %></title>
+    <link rel="stylesheet" type="text/css" media="screen" href="/main.css" />
+  </head>
+  <body>
+    <div id="<%= @mini ? 'layout_mini' : 'layout_max' %>">
+      <% if @error %>
+        <div id="error">
+          <%= escape_html @error %>
+        </div>
+      <% end %>
+
+      <div id="header">
+      </div>
+
+      <div id="content">
+        <%= yield %>
+      </div>
+    </div>
+  </body>
+</html>
