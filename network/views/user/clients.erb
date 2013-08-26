@@ -1,15 +1,19 @@
 <% if @target_user == @user or @user.is_admin? %>
   <form method="POST">
     <div>
-      <label for="client_name">Client name:</label>
-      <span class="username_prefix"><%= escape_html @target_user.name %>/</span>
-      <input name="client_name" />
+      <label for="client_name">Client name</label>
+      <div class="client_name_group">
+        <span class="username_prefix"><%= escape_html @target_user.name %>/</span>
+        <input name="client_name" />
+      </div>
     </div>
     <div>
-      <label for="permissions">Permissions (comma separated):</label>
+      <label for="permissions">Permissions</label>
       <input name="permissions" />
+    </div>
+    <div class="clear"></div>
     <div>
-      <input type="submit" value="Add a new client"></input>
+      <input type="submit" value="Add a new client" />
     </div>
   </form>
 <% end %>
@@ -19,7 +23,11 @@
     <li>
       <dl>
         <dt>Client name</dt>
-        <dd class="client_name"><%= escape_html client.name %></dd>
+        <% if client.name =~ /^([^\/]+\/)(.*)/ %>
+          <dd class="client_name"><span class="username_prefix"><%= escape_html $1 %></span><%= escape_html $2 %></dd>
+        <% else %>
+          <dd class="client_name"><%= escape_html client.name %></dd>
+        <% end %>
 
         <% if @target_user == @user or @user.is_admin? %>
           <dt>Key</dt>
@@ -27,12 +35,15 @@
         <% end %>
 
         <dt>Permissions</dt>
-        <ul class="client_permissions">
-          <% client.permissions.each do |permission| %>
-            <li><%= escape_html permission %></li>
-          <% end %>
-        </ul>
+        <dd>
+          <ul class="client_permissions">
+            <% client.permissions.each do |permission| %>
+              <li><%= escape_html permission %></li>
+            <% end %>
+          </ul>
+        </dd>
       </dl>
+      <div class="clear"></div>
     </li>
   <% end %>
 </ul>

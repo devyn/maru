@@ -4,17 +4,29 @@
   <head>
     <title><%= settings.app_config["name"] %></title>
     <link rel="stylesheet" type="text/css" media="screen" href="/main.css" />
+    <link rel="stylesheet" type="text/css" media="screen" href="/custom.css" />
   </head>
   <body>
-    <div id="<%= @mini ? 'layout_mini' : 'layout_max' %>">
+    <div id="layout" class="<%= @mini ? 'mini' : '' %>">
+      <div id="header">
+        <a href="/"><img src="/header.png" /></a>
+
+        <nav>
+          <ul>
+            <% @nav_links.each do |(title, href)| %>
+              <li><a href="<%= href %>"><%= escape_html title %></a></li>
+            <% end %>
+          </ul>
+        </nav>
+
+        <div class="clear"></div>
+      </div>
+
       <% if @error %>
         <div id="error">
           <%= escape_html @error %>
         </div>
       <% end %>
-
-      <div id="header">
-      </div>
 
       <div id="content">
         <%= yield %>

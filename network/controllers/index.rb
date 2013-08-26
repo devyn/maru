@@ -1,11 +1,12 @@
 get '/' do
+  erb :index
 end
 
 # The following are customizable overrides of the default
 # static files.
 
 # header.png replacements should be in custom_header.png.
-# A header image should be 384x128 pixels in dimension
+# A header image should be 300x96 pixels in dimension
 # and must be PNG format.
 
 get '/header.png' do
@@ -16,7 +17,7 @@ get '/header.png' do
   if File.exists? custom_header
     send_file custom_header
   else
-    send_file File.expand_path("header.png", settings.public_folder)
+    send_file File.expand_path("default_header.png", settings.public_folder)
   end
 end
 

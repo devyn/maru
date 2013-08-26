@@ -26,6 +26,16 @@ post '/user/login' do
   end
 end
 
+get '/user/logout' do
+  if logged_in?
+    session[:username] = nil
+
+    redirect(params[:redirect] || '/')
+  else
+    redirect '/'
+  end
+end
+
 get '/user/clients' do
   must_be_logged_in!
 
@@ -36,6 +46,8 @@ end
 
 post '/user/clients' do
   must_be_logged_in!
+
+  @target_user = @user
 
   if Client[@user.name + "/" + params[:client_name]]
     @error = "You have already registered a client with that name."

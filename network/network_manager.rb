@@ -42,6 +42,7 @@ require_relative 'models/user'
 require_relative 'models/client'
 
 require_relative 'helpers/user'
+require_relative 'helpers/nav'
 
 configure do
   User.redis        = settings.redis
