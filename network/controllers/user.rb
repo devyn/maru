@@ -1,62 +1,91 @@
-get '/user/login' do
-  if logged_in?
-    redirect '/'
-  else
-    erb :'user/login'
-  end
+get '/users' do
+  must_be_admin!
+
+  @users = User.all
+
+  erb :users
 end
 
-post '/user/login' do
-  if logged_in?
-    redirect '/'
-  else
-    if user = User[params[:username]]
-      if user.password == params[:password]
-        session[:username] = user.name
+post '/users' do
+  must_be_admin!
 
-        redirect(params[:redirect] || '/')
-      else
-        @error = "Invalid username or password."
-        erb :'user/login'
-      end
-    else
-      @error = "Invalid username or password."
-      erb :'user/login'
-    end
+  error = ->(code, message) {
+    @error = message
+    @users = User.all
+
+    halt code, erb(:users)
+  }
+
+  if params[:username].to_s.strip.empty?
+    error.(400, "Username must not be blank.")
   end
+  if params[:password].to_s.strip.empty?
+    error.(400, "Password must not be blank.")
+  end
+
+  begin
+    user = User.create(params[:username], params[:password], params[:role] == "admin")
+  rescue
+    error.(409, "Could not create user: #$!")
+  end
+
+  redirect request.referrer
 end
 
-get '/user/logout' do
-  if logged_in?
-    session[:username] = nil
-
-    redirect(params[:redirect] || '/')
-  else
-    redirect '/'
-  end
-end
-
-get '/user/clients' do
+get '/my/*' do |splat|
   must_be_logged_in!
 
-  @target_user = @user
+  redirect "/user/#{@user.name}/#{splat}"
+end
+
+get '/user/:name/clients' do
+  must_be_logged_in!
+
+  if !(@target_user = User[params[:name]])
+    halt 404
+  end
+
+  if @user != @target_user
+    must_be_admin!
+  end
 
   erb :'user/clients'
 end
 
-post '/user/clients' do
+post '/user/:name/clients' do
   must_be_logged_in!
 
-  @target_user = @user
+  if !(@target_user = User[params[:name]])
+    halt 404
+  end
 
-  if Client[@user.name + "/" + params[:client_name]]
+  if @user != @target_user
+    must_be_admin!
+  end
+
+  client_name = params[:client_name].to_s.strip
+  permissions = params[:permissions].to_s.split(",").map(&:strip)
+
+  if client_name.empty?
+    @error = "Client name must not be empty."
+
+    halt 400, erb(:'/user/clients')
+  end
+
+  if permissions.empty?
+    @error = "Must specify at least one permission."
+
+    halt 400, erb(:'/user/clients')
+  end
+
+  if Client[@target_user.name + "/" + client_name]
     @error = "You have already registered a client with that name."
 
-    [409, erb(:'/user/clients')]
+    halt 409, erb(:'/user/clients')
   else
-    client = Client.new(@user.name + "/" + params[:client_name])
+    client = Client.new(@target_user.name + "/" + params[:client_name])
     
-    client.user        = @user.name
+    client.user        = @target_user.name
     client.permissions = params[:permissions] ? params[:permissions].split(",") : []
     client.save
 

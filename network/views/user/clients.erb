@@ -18,7 +18,7 @@
   </form>
 <% end %>
 
-<ul class="clients">
+<ul class="clients objects">
   <% @target_user.clients.each do |client| %>
     <li>
       <dl>
@@ -42,7 +42,19 @@
             <% end %>
           </ul>
         </dd>
+
+        <dt>Status</dt>
+        <dd><%= client.active? ? "Online" : "Offline" %></dd>
       </dl>
+      <ul class="action_group">
+        <li>
+        <% if client.name =~ /^#{Regexp.escape(@target_user.name)}\/(.*)/; cn = $1 %>
+          <a class="button negative" href="/user/<%= escape @target_user.name %>/client/<%= escape cn %>/delete">Delete</a>
+        <% else %>
+          <a class="button negative" href="/client/<%= escape client.name %>/delete">Delete</a>
+        <% end %>
+        </li>
+      </ul>
       <div class="clear"></div>
     </li>
   <% end %>

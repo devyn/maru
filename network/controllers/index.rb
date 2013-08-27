@@ -1,4 +1,8 @@
 get '/' do
+  if settings.app_config["private"]
+    must_be_logged_in!
+  end
+
   erb :index
 end
 

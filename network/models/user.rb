@@ -15,6 +15,23 @@ class User
     end
   end
 
+  def self.create(username, password, admin=false)
+    if redis.exists(redis_key("user:#{username}"))
+      raise "user already exists"
+    else
+      user = new(username)
+      user.password = password
+      user.is_admin = admin
+      return user
+    end
+  end
+
+  def self.all
+    redis.keys(redis_key("user:*")).map do |u|
+      new u.match(/user:(.*)$/)[1]
+    end
+  end
+
   def initialize(username)
     @name = username
   end
@@ -48,7 +65,13 @@ class User
   end
 
   def clients
-    client_names = redis.smembers(redis_key("user(clients):#@name"))
+    clients_key = redis_key("user(clients):#@name")
+
+    if block_given?
+      client_names = yield clients_key
+    else
+      client_names = redis.smembers(clients_key)
+    end
 
     if client_names.empty?
       []
@@ -59,8 +82,34 @@ class User
     end
   end
 
+  def active_clients
+    clients { |key|
+      redis.sinter(key, redis_key("active_clients"))
+    }
+  end
+
+  def clients_count
+    redis.scard(redis_key("user(clients):#@name"))
+  end
+
   def owns_client?(client_name)
     redis.sismember(redis_key("user(clients):#@name"), client_name)
+  end
+
+  def delete
+    redis.multi { nonatomic_delete }
+  end
+
+  def nonatomic_delete
+    # delete our clients first
+    clients.each &:nonatomic_delete
+
+    # delete our own data
+    redis.del(redis_key("user(clients):#@name"))
+    redis.del(user_data_key)
+
+    # notify server via pubsub
+    redis.publish(redis_key("users"), "deleted:#@name")
   end
 
   def user_data_key

@@ -59,6 +59,10 @@ class Client
     end
   end
 
+  def active?
+    redis.sismember(redis_key("active_clients"), @name)
+  end
+
   def save
     unless @old_json == @json
       if !@json["key"]

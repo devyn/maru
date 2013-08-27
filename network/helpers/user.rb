@@ -9,7 +9,7 @@ helpers do
 
   def must_be_logged_in!
     unless logged_in?
-      halt redirect("/user/login?redirect=#{CGI.escape(request.fullpath)}")
+      halt redirect("/session/login?redirect=#{CGI.escape(request.fullpath)}")
     end
   end
 

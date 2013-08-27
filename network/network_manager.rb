@@ -10,6 +10,7 @@ require 'yaml'
 DEFAULT_CONFIG = {
   "name" => "mynetwork",
   "cookie_secret" => rand(36**36).to_s(36),
+  "private" => false,
   "redis" => {
     "host" => "localhost",
     "port" => 6379,
@@ -53,4 +54,9 @@ configure do
 end
 
 require_relative 'controllers/index'
+require_relative 'controllers/session'
 require_relative 'controllers/user'
+
+not_found do
+  erb :not_found
+end

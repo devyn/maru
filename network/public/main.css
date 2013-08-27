@@ -9,6 +9,10 @@ body {
  font-size: 14px;
 }
 
+input, select, textarea {
+  box-sizing: border-box;
+}
+
 .clear {
   clear: both;
 }
@@ -86,7 +90,7 @@ ul {
   padding: 0;
 }
 
-ul.clients > li {
+ul.objects > li {
   border: 1px solid #ddd;
   padding: 7px;
   margin: 0;
@@ -123,6 +127,7 @@ dt, form label {
 }
 
 dd {
+  min-height: 1.15em;
   padding: 0.2em;
   margin-bottom: 0.5em;
 }
@@ -145,6 +150,7 @@ form label {
   width: 25%;
   clear: both;
   margin-bottom: 0.5em;
+  border: 1px solid transparent;
 }
 
 form label + * {
@@ -153,17 +159,25 @@ form label + * {
 }
 
 form input {
+  background: #fff;
   border: 1px solid #ddd;
   padding: 0.2em;
   margin: 0;
 }
 
-form input:not([type]), form input[type="text"], form input[type="password"] {
+form input:not([type]), form input[type="text"], form input[type="password"], form select {
   width: 65%;
 }
 
 form .client_name_group input {
   width: 200px;
+}
+
+form select {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 0.2em;
+  margin: 0;
 }
 
 form input[type="submit"] {
@@ -173,6 +187,7 @@ form input[type="submit"] {
   padding: 0.2em;
   text-align: center;
 
+  font-size: 13px;
   font-weight: lighter;
 
   background: #ddd;
@@ -181,13 +196,43 @@ form input[type="submit"] {
   cursor: pointer;
 }
 
+ul.action_group {
+  clear: both;
+  float: right;
+
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.action_group > li {
+  display: inline;
+  margin-right: 3px;
+}
+
+ul.action_group > li:last-child {
+  margin-right: 0;
+}
+
 a.button {
+  display: inline-block;
   padding: 0.2em;
 
+  font-size: 13px;
   font-weight: lighter;
+  text-decoration: none;
 
+  border: 1px solid #ddd;
   background: #ddd;
   color: #000;
+}
+
+a.button.negative {
+  background: #fcc;
+}
+
+a.button.positive {
+  background: #cfc;
 }
 
 .username_prefix {

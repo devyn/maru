@@ -1,0 +1,48 @@
+<form method="POST">
+  <div>
+    <label for="username">Username</label>
+    <input name="username" />
+  </div>
+  <div>
+    <label for="password">Password</label>
+    <input name="password" type="password" />
+  </div>
+  <div>
+    <label for="role">Role</label>
+    <select name="role">
+      <option value="admin">Administrator</option>
+      <option value="user" selected>User</option>
+    </select>
+  </div>
+  <div class="clear"></div>
+  <div>
+    <input type="submit" value="Create a new user" />
+  </div>
+</form>
+
+<ul class="users objects">
+  <% @users.each do |user| %>
+    <li>
+      <dl>
+        <dt>Name</dt>
+        <dd><%= escape_html user.name %></dd>
+        <dt>Clients</dt>
+        <dd><%= user.clients_count %> total, <%= user.active_clients.count %> active</dd>
+        <dt>Role</dt>
+        <dd><%= user.is_admin? ? "Administrator" : "User" %></dd>
+      </dl>
+      <ul class="action_group">
+        <li>
+          <a class="button" href="/user/<%= escape user.name %>/clients">Clients</a>
+        </li>
+        <li>
+          <a class="button" href="/user/<%= escape user.name %>/password/change">Change password</a>
+        </li>
+        <li>
+          <a class="button negative" href="/user/<%= escape user.name %>/delete">Delete</a>
+        </li>
+      </ul>
+      <div class="clear"></div>
+    </li>
+  <% end %>
+</ul>
