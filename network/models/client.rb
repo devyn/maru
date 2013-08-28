@@ -102,4 +102,12 @@ class Client
   def redis_key(string)
     self.class.redis_key(string)
   end
+
+  def ==(o)
+    if o.is_a? Client
+      self.name == o.name
+    else
+      super o
+    end
+  end
 end

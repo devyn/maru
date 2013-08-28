@@ -28,6 +28,12 @@
         </div>
       <% end %>
 
+      <% if @success %>
+        <div id="success">
+          <%= escape_html @success %>
+        </div>
+      <% end %>
+
       <div id="content">
         <%= yield %>
       </div>

@@ -17,13 +17,20 @@ input, select, textarea {
   clear: both;
 }
 
-#error {
+#error, #success {
   max-width: 480px;
   margin: 20px auto;
   text-align: center;
   padding: 10px;
   color: #fff;
+}
+
+#error {
   background: #ff4433;
+}
+
+#success {
+  background: #33aa44;
 }
 
 #layout {

@@ -41,13 +41,8 @@ end
 get '/user/:name/clients' do
   must_be_logged_in!
 
-  if !(@target_user = User[params[:name]])
-    halt 404
-  end
-
-  if @user != @target_user
-    must_be_admin!
-  end
+  target_user_is(:name)
+  must_be_admin_to_target_others!
 
   erb :'user/clients'
 end
@@ -55,13 +50,8 @@ end
 post '/user/:name/clients' do
   must_be_logged_in!
 
-  if !(@target_user = User[params[:name]])
-    halt 404
-  end
-
-  if @user != @target_user
-    must_be_admin!
-  end
+  target_user_is(:name)
+  must_be_admin_to_target_others!
 
   client_name = params[:client_name].to_s.strip
   permissions = params[:permissions].to_s.split(",").map(&:strip)
@@ -69,19 +59,19 @@ post '/user/:name/clients' do
   if client_name.empty?
     @error = "Client name must not be empty."
 
-    halt 400, erb(:'/user/clients')
+    halt 400, erb(:'user/clients')
   end
 
   if permissions.empty?
     @error = "Must specify at least one permission."
 
-    halt 400, erb(:'/user/clients')
+    halt 400, erb(:'user/clients')
   end
 
   if Client[@target_user.name + "/" + client_name]
     @error = "You have already registered a client with that name."
 
-    halt 409, erb(:'/user/clients')
+    halt 409, erb(:'user/clients')
   else
     client = Client.new(@target_user.name + "/" + params[:client_name])
     
@@ -91,4 +81,51 @@ post '/user/:name/clients' do
 
     redirect request.referrer
   end
+end
+
+get '/user/:name/password/change' do
+  must_be_logged_in!
+
+  target_user_is(:name)
+  must_be_admin_to_target_others!
+
+  erb :'user/password/change'
+end
+
+post '/user/:name/password/change' do
+  must_be_logged_in!
+
+  target_user_is(:name)
+  must_be_admin_to_target_others!
+
+  if @user == @target_user
+    # then old password is required
+
+    unless @user.password == params[:old_password]
+      @error = "Your current password does not match the old password provided."
+
+      halt 403, erb(:'user/password/change')
+    end
+  end
+
+  new_password     = params[:new_password].to_s
+  confirm_password = params[:confirm_password].to_s
+
+  if new_password != confirm_password
+    @error = "The new password and confirm password fields differ."
+
+    halt 422, erb(:'user/password/change')
+  end
+
+  if new_password.empty?
+    @error = "Can not use an empty password."
+
+    halt 422, erb(:'user/password/change')
+  end
+
+  @target_user.password = new_password
+
+  @success = "Password changed."
+
+  erb :'user/password/change'
 end

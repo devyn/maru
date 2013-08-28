@@ -20,4 +20,14 @@ helpers do
       halt 403, "You are not an admin."
     end
   end
+
+  def target_user_is(param_name)
+    if !(@target_user = User[params[param_name]])
+      halt 404
+    end
+  end
+
+  def must_be_admin_to_target_others!
+    must_be_admin! if @user != @target_user
+  end
 end
