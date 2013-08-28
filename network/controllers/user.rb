@@ -17,10 +17,10 @@ post '/users' do
   }
 
   if params[:username].to_s.strip.empty?
-    error.(400, "Username must not be blank.")
+    error.(422, "Username must not be blank.")
   end
   if params[:password].to_s.strip.empty?
-    error.(400, "Password must not be blank.")
+    error.(422, "Password must not be blank.")
   end
 
   begin
@@ -59,13 +59,13 @@ post '/user/:name/clients' do
   if client_name.empty?
     @error = "Client name must not be empty."
 
-    halt 400, erb(:'user/clients')
+    halt 422, erb(:'user/clients')
   end
 
   if permissions.empty?
     @error = "Must specify at least one permission."
 
-    halt 400, erb(:'user/clients')
+    halt 422, erb(:'user/clients')
   end
 
   if Client[@target_user.name + "/" + client_name]
