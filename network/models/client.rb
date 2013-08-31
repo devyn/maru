@@ -91,6 +91,17 @@ class Client
     end
   end
 
+  def delete
+    redis.multi { nonatomic_delete }
+  end
+
+  def nonatomic_delete
+    redis.srem(redis_key("user(clients):#{@json["user"]}"), @name)
+    redis.hdel(redis_key("clients"), @name)
+
+    redis.publish(redis_key("clients"), "deleted:#@name")
+  end
+
   def redis
     self.class.redis
   end

@@ -147,10 +147,14 @@ dd.client_key {
   font-family: monospace;
 }
 
-form {
+form.full {
   position: relative;
   max-width: 500px;
   margin: auto;
+}
+
+form.button_form {
+  display: inline;
 }
 
 form label {
@@ -221,7 +225,7 @@ ul.action_group > li:last-child {
   margin-right: 0;
 }
 
-a.button {
+.button {
   display: inline-block;
   padding: 0.2em;
 
@@ -234,11 +238,11 @@ a.button {
   color: #000;
 }
 
-a.button.negative {
+.button.negative {
   background: #fcc;
 }
 
-a.button.positive {
+.button.positive {
   background: #cfc;
 }
 

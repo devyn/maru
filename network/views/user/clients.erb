@@ -1,5 +1,5 @@
 <% if @target_user == @user or @user.is_admin? %>
-  <form method="POST">
+  <form class="full" method="POST">
     <div>
       <label for="client_name">Client name</label>
       <div class="client_name_group">
@@ -48,11 +48,13 @@
       </dl>
       <ul class="action_group">
         <li>
-        <% if client.name =~ /^#{Regexp.escape(@target_user.name)}\/(.*)/; cn = $1 %>
-          <a class="button negative" href="/user/<%= escape @target_user.name %>/client/<%= escape cn %>/delete">Delete</a>
+        <% if client.name =~ /^#{Regexp.escape(@target_user.name)}\/([^\/]+)$/; cn = $1 %>
+          <form class="button_form" method="POST" action="/user/<%= escape @target_user.name %>/client/<%= escape cn %>/delete">
         <% else %>
-          <a class="button negative" href="/client/<%= escape client.name %>/delete">Delete</a>
+          <form class="button_form" method="POST" action="/client/<%= escape client.name %>/delete">
         <% end %>
+            <input class="button negative" type="submit" value="Delete" />
+          </form>
         </li>
       </ul>
       <div class="clear"></div>

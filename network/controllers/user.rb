@@ -79,7 +79,46 @@ post '/user/:name/clients' do
     client.permissions = params[:permissions] ? params[:permissions].split(",") : []
     client.save
 
-    redirect request.referrer
+    @success = "Client created successfully."
+
+    erb :'user/clients'
+  end
+end
+
+post '/user/:name/client/:client_name/delete' do
+  must_be_logged_in!
+
+  target_user_is(:name)
+  must_be_admin_to_target_others!
+
+  if client = Client[@target_user.name + "/" + params[:client_name]]
+    client.delete
+
+    @success = "Client deleted successfully."
+
+    erb :'user/clients'
+  else
+    halt 404
+  end
+end
+
+post '/client/*/delete' do |client_name|
+  must_be_logged_in!
+
+  if client = Client[client_name]
+    if @user.is_admin? or @user.owns_client? client_name
+      @target_user = User[client.user] || @user
+
+      client.delete
+
+      @success = "Client deleted successfully."
+
+      erb :'user/clients'
+    else
+      halt 403
+    end
+  else
+    halt 404
   end
 end
 
