@@ -45,6 +45,18 @@ configure do
   set :redis,      Redis.new(settings.app_config["redis"])
   set :redis_sub,  Redis.new(settings.app_config["redis"])
   set :key_prefix, settings.app_config["redis"]["key_prefix"]
+
+  # if they don't exist already, the custom sass files should be initialized
+  if Dir[File.join(settings.public_folder, "stylesheets/sass/custom/main.{sass,scss}")].empty?
+    File.open(File.join(settings.public_folder, "stylesheets/sass/custom/main.sass"), "w") do |f|
+      f.puts "// Put your custom styles in here."
+    end
+  end
+  if Dir[File.join(settings.public_folder, "stylesheets/sass/custom/_variables.{sass,scss}")].empty?
+    File.open(File.join(settings.public_folder, "stylesheets/sass/custom/_variables.sass"), "w") do |f|
+      f.puts "// Put your custom variables in here."
+    end
+  end
 end
 
 require_relative 'models/user'
