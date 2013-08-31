@@ -42,6 +42,8 @@
 
       %ul.action_group
         %li
-          %form.button_form{ method: 'POST', action: client_url(client) + "/delete" }
+          %form.button_form{ method: 'POST',
+                             action: client_url(client) + "/delete",
+                             onsubmit: "return confirm('Are you sure?');" }
             %input.button.negative{ type: 'submit', value: "Delete" }
       .clear

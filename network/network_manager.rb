@@ -47,13 +47,18 @@ configure do
   set :key_prefix, settings.app_config["redis"]["key_prefix"]
 
   # if they don't exist already, the custom sass files should be initialized
-  if Dir[File.join(settings.public_folder, "stylesheets/sass/custom/main.{sass,scss}")].empty?
-    File.open(File.join(settings.public_folder, "stylesheets/sass/custom/main.sass"), "w") do |f|
+  if !File.directory?(custom_dir = File.join(settings.public_folder, "stylesheets/sass/custom"))
+    Dir.mkdir(custom_dir)
+  end
+
+  if Dir[File.join(custom_dir, "main.{sass,scss}")].empty?
+    File.open(File.join(custom_dir, "main.sass"), "w") do |f|
       f.puts "// Put your custom styles in here."
     end
   end
-  if Dir[File.join(settings.public_folder, "stylesheets/sass/custom/_variables.{sass,scss}")].empty?
-    File.open(File.join(settings.public_folder, "stylesheets/sass/custom/_variables.sass"), "w") do |f|
+
+  if Dir[File.join(custom_dir, "_variables.{sass,scss}")].empty?
+    File.open(File.join(custom_dir, "_variables.sass"), "w") do |f|
       f.puts "// Put your custom variables in here."
     end
   end

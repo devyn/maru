@@ -31,6 +31,24 @@ get '/my/*' do |splat|
   redirect "/user/#{@user.name}/#{splat}"
 end
 
+post '/user/:name/delete' do
+  must_be_admin!
+
+  target_user_is(:name)
+
+  if @target_user == @user
+    return_error "You can not delete yourself!"
+  end
+
+  begin
+    @target_user.delete
+  rescue
+    return_error "Could not delete user: #$!"
+  end
+
+  return_success "User deleted successfully."
+end
+
 get '/user/:name/password/change' do
   must_be_logged_in!
 

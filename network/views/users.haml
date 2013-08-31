@@ -37,6 +37,8 @@
         %li
           %a.button{ href: "/user/#{escape user.name}/password/change" } Change password
         %li
-          %form.button_form{ method: "POST", action: "/user/#{escape user.name}/delete" }
+          %form.button_form{ method: "POST",
+                             action: "/user/#{escape user.name}/delete",
+                             onsubmit: "return confirm('Are you sure?');" }
             %input.button.negative{ type: 'submit', value: 'Delete' }
       .clear

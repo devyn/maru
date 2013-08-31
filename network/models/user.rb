@@ -96,14 +96,30 @@ class User
     redis.sismember(redis_key("user(clients):#@name"), client_name)
   end
 
+  # Warning: causes up to 3 transactions.
   def delete
-    redis.multi { nonatomic_delete }
+    # Get the list of clients and delete us first
+    clients = nil
+    redis.multi do
+      clients = redis.smembers(redis_key("user(clients):#@name"))
+      nonatomic_delete
+    end
+
+    unless clients.value.empty?
+      # Grab client information
+      clients = clients.value.zip(redis.hmget(redis_key("clients"), clients.value)).map { |(client_name, client_json)|
+        client_json ? Client.new(client_name, client_json) : nil
+      }.reject(&:nil?)
+
+      # Delete them all
+      redis.multi do
+        clients.each &:nonatomic_delete
+      end
+    end
   end
 
+  # Warning: this does not delete associated clients.
   def nonatomic_delete
-    # delete our clients first
-    clients.each &:nonatomic_delete
-
     # delete our own data
     redis.del(redis_key("user(clients):#@name"))
     redis.del(user_data_key)
