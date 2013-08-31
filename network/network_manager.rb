@@ -1,4 +1,5 @@
 require 'sinatra'
+require 'rack-flash'
 require 'redis'
 require 'openssl'
 require 'bcrypt'
@@ -20,9 +21,6 @@ DEFAULT_CONFIG = {
   }
 }
 
-Sass::Plugin.options[:style] = :compressed
-use Sass::Plugin::Rack
-
 helpers do
   include Rack::Utils
 end
@@ -39,6 +37,11 @@ configure do
 
   use Rack::Session::Cookie, :secret => settings.app_config["cookie_secret"]
 
+  Sass::Plugin.options[:style] = :compressed
+  use Sass::Plugin::Rack
+
+  use Rack::Flash
+
   set :redis,      Redis.new(settings.app_config["redis"])
   set :redis_sub,  Redis.new(settings.app_config["redis"])
   set :key_prefix, settings.app_config["redis"]["key_prefix"]
@@ -50,6 +53,7 @@ require_relative 'models/client'
 require_relative 'helpers/user'
 require_relative 'helpers/client'
 require_relative 'helpers/nav'
+require_relative 'helpers/ui'
 
 configure do
   User.redis        = settings.redis

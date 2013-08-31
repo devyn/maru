@@ -17,21 +17,15 @@ post '/user/:name/clients' do
   permissions = params[:permissions].to_s.split(",").map(&:strip)
 
   if client_name.empty?
-    @error = "Client name must not be empty."
-
-    halt 422, haml(:'user/clients')
+    return_error "Client name must not be empty."
   end
 
   if permissions.empty?
-    @error = "Must specify at least one permission."
-
-    halt 422, haml(:'user/clients')
+    return_error "Must specify at least one permission."
   end
 
   if Client[@target_user.name + "/" + client_name]
-    @error = "You have already registered a client with that name."
-
-    halt 409, haml(:'user/clients')
+    return_error "You have already registered a client with that name."
   else
     client = Client.new(@target_user.name + "/" + params[:client_name])
     
@@ -39,9 +33,7 @@ post '/user/:name/clients' do
     client.permissions = params[:permissions] ? params[:permissions].split(",") : []
     client.save
 
-    @success = "Client created successfully."
-
-    haml :'user/clients'
+    return_success "Client created successfully."
   end
 end
 
@@ -54,9 +46,7 @@ post '/user/:name/client/:client_name/delete' do
   if client = Client[@target_user.name + "/" + params[:client_name]]
     client.delete
 
-    @success = "Client deleted successfully."
-
-    haml :'user/clients'
+    return_success "Client deleted successfully."
   else
     halt 404
   end
@@ -71,9 +61,7 @@ post '/client/*/delete' do |client_name|
 
       client.delete
 
-      @success = "Client deleted successfully."
-
-      haml :'user/clients'
+      return_success "Client deleted successfully."
     else
       halt 403
     end

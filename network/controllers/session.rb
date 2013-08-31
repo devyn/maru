@@ -16,12 +16,10 @@ post '/session/login' do
 
         redirect(params[:redirect] || '/')
       else
-        @error = "Invalid username or password."
-        haml :'user/login'
+        return_error "Invalid username or password."
       end
     else
-      @error = "Invalid username or password."
-      haml :'user/login'
+      return_error "Invalid username or password."
     end
   end
 end

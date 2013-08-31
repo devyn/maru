@@ -16,9 +16,10 @@
               %li
                 %a{ href: href }&= title
 
-      - if @error
-        #error&= @error
-      - if @success
-        #success&= @success
+      - if flash[:error]
+        #error&= flash[:error]
+
+      - if flash[:success]
+        #success&= flash[:success]
 
       #content= yield

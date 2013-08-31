@@ -9,27 +9,20 @@ end
 post '/users' do
   must_be_admin!
 
-  error = ->(code, message) {
-    @error = message
-    @users = User.all
-
-    halt code, haml(:users)
-  }
-
   if params[:username].to_s.strip.empty?
-    error.(422, "Username must not be blank.")
+    return_error "Username must not be blank."
   end
   if params[:password].to_s.strip.empty?
-    error.(422, "Password must not be blank.")
+    return_error "Password must not be blank."
   end
 
   begin
     user = User.create(params[:username], params[:password], params[:role] == "admin")
   rescue
-    error.(409, "Could not create user: #$!")
+    return_error "Could not create user: #$!"
   end
 
-  redirect request.referrer
+  return_success "User created successfully."
 end
 
 get '/my/*' do |splat|
@@ -57,9 +50,7 @@ post '/user/:name/password/change' do
     # then old password is required
 
     unless @user.password == params[:old_password]
-      @error = "Your current password does not match the old password provided."
-
-      halt 403, haml(:'user/password/change')
+      return_error "Your current password does not match the old password provided."
     end
   end
 
@@ -67,20 +58,14 @@ post '/user/:name/password/change' do
   confirm_password = params[:confirm_password].to_s
 
   if new_password != confirm_password
-    @error = "The new password and confirm password fields differ."
-
-    halt 422, haml(:'user/password/change')
+    return_error "The new password and confirm password fields differ."
   end
 
   if new_password.empty?
-    @error = "Can not use an empty password."
-
-    halt 422, haml(:'user/password/change')
+    return_error "Can not use an empty password."
   end
 
   @target_user.password = new_password
 
-  @success = "Password changed."
-
-  haml :'user/password/change'
+  return_success "Password changed."
 end
