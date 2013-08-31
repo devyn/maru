@@ -235,7 +235,7 @@ module Maru
         send_command "hello", name: @client_name, type: "worker", extensions: []
       end
 
-      def unbind
+      def post_protocol_unbind
         if @registered
           @worker.unregister_network self
           @registered = false

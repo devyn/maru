@@ -62,6 +62,10 @@ module Maru
         info "Job \e[1m%i\e[0;36m \e[33mrejected\e[36m by \e[35m%s" % [id, worker_name]
       end
 
+      def client_was_deleted(client_name)
+        info "Client \e[35m%s\e[0;36m was deleted and will be disconnected" % [client_name]
+      end
+
       def exiting
         info "Exiting"
       end
@@ -104,7 +108,7 @@ module Maru
 
     def subscribe_redis
       Thread.start do
-        @redis_sub.subscribe(key("available_jobs")) do |on|
+        @redis_sub.subscribe(key("available_jobs"), key("clients")) do |on|
           on.message do |channel,message|
             case channel
             when key("available_jobs")
@@ -115,6 +119,13 @@ module Maru
                   client.send_command "job_available"
                 end
                 @waitlist.delete type
+              end
+            when key("clients")
+              case message
+              when /^deleted:(.*)/
+                client_name = $1
+
+                EventMachine.next_tick { client_was_deleted(client_name) }
               end
             end
           end
@@ -211,6 +222,8 @@ module Maru
 
         @redis.sadd(key("available_jobs:#{job_json["type"]}"), id)
 
+        @redis.publish key("available_jobs"), "#{id}:#{job_json["type"]}"
+
         @log.reject(worker_name, id)
         true
       else
@@ -222,12 +235,53 @@ module Maru
       raise $!
     end
 
+    def reject_all(worker_name)
+      assigned_jobs = @redis.smembers(key("assigned_jobs:#{worker_name}"))
+
+      unless assigned_jobs.empty?
+        job_jsons = @redis.hmget(key("jobs"), assigned_jobs).map { |json| JSON.parse(json) }
+
+        jobs = assigned_jobs.zip(job_jsons)
+
+        @redis.multi do
+          jobs.each do |(id, job_json)|
+            @redis.sadd(key("available_jobs:#{job_json["type"]}"), id)
+
+            @redis.publish key("available_jobs"), "#{id}:#{job_json["type"]}"
+
+            @log.reject(worker_name, id)
+          end
+
+          @redis.del(key("assigned_jobs:#{worker_name}"))
+        end
+      end
+    end
+
     def register_client(client)
       @clients << client
     end
 
     def unregister_client(client)
       @clients.delete client
+    end
+
+    def client_was_deleted(client_name)
+      @log.client_was_deleted(client_name)
+
+      if clients = @clients.select { |c| c.name == client_name }
+        remaining = clients.count
+
+        clients.each { |client|
+          client.on_disconnect {
+            remaining -= 1
+            if remaining == 0
+              # reject jobs owned by the client
+              reject_all client_name
+            end
+          }
+          client.critical :AuthenticationFailure
+        }
+      end
     end
 
     module Client
@@ -247,7 +301,7 @@ module Maru
         send_command "hello", type: "network", name: @network.name, extensions: []
       end
 
-      def unbind
+      def post_protocol_unbind
         @network.unregister_client self
       end
 
@@ -304,7 +358,7 @@ module Maru
               # challenge a shared key to prove the identity of the other
               # before continuing.
 
-              result.succeed(Maru::Authentication.respond(challenge, @key))
+              result.succeed(Maru::Authentication.respond(challenge, @info["key"]))
             else
               # `hello` must be sent first
               result.unrecognized_command!

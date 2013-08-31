@@ -23,12 +23,22 @@ module Maru
       @command_results = {}
       @next_id         = 0
 
+      @on_disconnect   = []
+
       start_tls verify_peer: false
     end
 
     def ssl_handshake_completed
       if defined?(post_protocol_init)
         post_protocol_init
+      end
+    end
+
+    def unbind
+      @on_disconnect.each &:call
+
+      if defined?(post_protocol_unbind)
+        post_protocol_unbind
       end
     end
 
@@ -91,6 +101,12 @@ module Maru
     def critical(msg)
       send_data({critical: msg.to_s}.to_json << "\n")
       close_connection_after_writing
+    end
+
+    def on_disconnect(&block)
+      if block.respond_to? :call
+        @on_disconnect << block
+      end
     end
   end
 end

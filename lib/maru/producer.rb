@@ -1,44 +1,91 @@
 require 'socket'
 require 'json'
 
+require_relative 'authentication'
+require_relative 'json_protocol'
+
 module Maru
-  class Producer
-    def initialize(host, port=8490)
-      @host    = host
-      @port    = port
-      @socket  = TCPSocket.new(host, port)
-      @next_id = 0
+  module Producer
+    include Maru::JSONProtocol
+    include EventMachine::Deferrable
 
-      if (hello = JSON.parse(@socket.gets))["command"] == "hello"
-        type, @network_name, @network_options = hello["arguments"]
+    def self.connect(host, port, client_name, client_key, payload, &block)
+      EventMachine.connect(host, port, self, client_name, client_key, payload, &block)
+    end
 
-        if type != "network"
-          raise "remote is not a network (type = #{type})"
+    def initialize(client_name, client_key, payload)
+      @client_name = client_name
+      @client_key  = client_key
+      @payload     = payload
+    end
+
+    def post_protocol_init
+      send_command "hello", type: "producer", name: @client_name, extensions: []
+    end
+
+    def receive_command(result, name, *args)
+      case name
+      when "hello"
+        hello = args[0]
+
+        if hello["type"] != "network"
+          critical  :UnexpectedConnectionType
+          self.fail "the server is not a network (type=#{hello["type"]})"
         end
-      else
-        raise "did not receive hello from network"
-      end
 
-      # FIXME: temporary fake authentication
-      send_command "_new_session", "producer"
+        challenge = Maru::Authentication::Challenge.new(@client_key)
+
+        send_command("challenge", challenge.to_s).callback { |response|
+          if challenge.verify(response)
+            @network_verified = true
+            if @self_verified
+              submit_payload
+            end
+          else
+            critical  :AuthenticationFailure
+            self.fail "failed to prove that the server shares our key"
+          end
+        }.errback { |err|
+          critical  :AuthenticationFailure
+          self.fail "server failed to respond to challenge; #{err["name"]}: #{err["message"]}"
+        }
+      when "challenge"
+        result.succeed(Maru::Authentication.respond(args[0], @client_key))
+
+        @self_verified = true
+        if @network_verified
+          submit_payload
+        end
+      end
     end
 
-    def submit(job_json)
-      send_command "submit", job_json
-    end
+    def submit_payload
+      remaining = @payload.count
+      errors    = []
 
-    def send_command(name, *args)
-      @socket.puts({command: name, arguments: args, id: @next_id}.to_json)
+      @payload.each do |job_json|
+        send_command("submit", job_json).callback {
+          remaining -= 1
 
-      until (msg = JSON.parse(@socket.gets)) and msg["reply"] == @next_id
-      end
+          $stdout << '.'
+          $stdout.flush
 
-      @next_id += 1
+          if remaining == 0
+            $stdout.puts
+            self.succeed(errors)
+          end
+        }.errback { |error|
+          remaining -= 1
 
-      if msg["result"]
-        msg["result"]
-      elsif msg["error"]
-        raise "#{msg["error"]["name"]}: #{msg["error"]["message"]}"
+          $stdout << 'F'
+          $stdout.flush
+
+          errors << error.update("job" => job_json)
+          if remaining == 0
+            $stdout.puts
+            self.succeed(errors)
+          end
+        }
       end
     end
   end

@@ -3,6 +3,7 @@
 $:.unshift(File.join(File.dirname(__FILE__), "..", "lib"))
 
 require 'optparse'
+require 'eventmachine'
 
 require 'maru/producer'
 
@@ -17,6 +18,8 @@ result_sha256 = nil
 
 host = "localhost"
 port = 8490
+client_name = nil
+client_key = nil
 
 repeat = 1
 
@@ -25,6 +28,14 @@ opts = OptionParser.new
 opts.on "-N", "--network HOST[:PORT]", "Network address" do |hostport|
   host, port = hostport.split(":")
   port       = port ? port.to_i : 8490
+end
+
+opts.on "-l", "--client-name STRING", "Client name" do |name|
+  client_name = name
+end
+
+opts.on "-k", "--client-key STRING", "Client key" do |key|
+  client_key = key
 end
 
 opts.on "-d", "--destination URL", "Job destination URL" do |destination|
@@ -73,8 +84,15 @@ end
 
 opts.parse!(ARGV)
 
-producer = Maru::Producer.new(host, port)
-
-repeat.times {
-  producer.submit job
-}
+EventMachine.run do
+  Maru::Producer.connect(host, port, client_name, client_key, [job] * repeat) do |producer|
+    producer.callback do |errors|
+      errors.each do |error|
+        warn "Warning: job submission failed (#{error["name"]}: #{error["message"]}): #{error["job"].to_json}"
+      end
+      exit
+    end.errback do |message|
+      abort "Failed: #{message}"
+    end
+  end
+end
