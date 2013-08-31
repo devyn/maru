@@ -1,0 +1,42 @@
+%form.full{ method: "POST" }
+  %div
+    %label{ for: 'username' } Username
+    %input{ name: 'username' }/
+
+  %div
+    %label{ for: 'password' } Password
+    %input{ name: 'password', type: 'password' }/
+          
+  %div
+    %label{ for: 'role' } Role
+    %select{ name: 'role' }
+      %option{ value: 'admin' } Administrator
+      %option{ value: 'user', selected: true } User
+          
+  .clear
+          
+  %div
+    %input{ type: 'submit', value: "Create a new user" }/
+
+%ul.users.objects
+  - @users.each do |user|
+    %li
+      %dl
+        %dt Name
+        %dd&= user.name
+
+        %dt Clients
+        %dd& #{user.clients_count} total, #{user.active_clients.count} active
+
+        %dt Role
+        %dd= user.is_admin? ? "Administrator" : "User"
+
+      %ul.action_group
+        %li
+          %a.button{ href: "/user/#{escape user.name}/clients" } Clients
+        %li
+          %a.button{ href: "/user/#{escape user.name}/password/change" } Change password
+        %li
+          %form.button_form{ method: "POST", action: "/user/#{escape user.name}/delete" }
+            %input.button.negative{ type: 'submit', value: 'Delete' }
+      .clear

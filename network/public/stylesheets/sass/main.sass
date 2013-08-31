@@ -1,0 +1,221 @@
+@import "variables"
+@import "custom/variables"
+
+html, body
+  margin: 0
+  padding: 0
+
+body
+  background-color: $background-color
+  color: $foreground-color
+  font-family: sans-serif
+  font-size: 14px
+
+input, select, textarea
+  box-sizing: border-box
+
+.clear
+  clear: both
+
+@function appropriate-text-color($color)
+  @if lightness($color) < 75%
+    @return #fff
+  @else
+    @return #000
+
+@mixin message-box($color)
+  max-width: 480px
+  margin: 20px auto
+  text-align: center
+  padding: 10px
+
+  background-color: $color
+  color: appropriate-text-color($color)
+
+#error
+  @include message-box($negative-color)
+
+#success
+  @include message-box($positive-color)
+
+#layout
+  max-width: 980px
+  margin: auto
+
+  #header
+    width: auto
+    height: 96px
+    padding: 16px 0
+    margin: 0 10px
+
+    border-bottom: 3px solid $accent-color
+
+    img
+      float: left
+      height: 96px
+      width: auto
+
+  #content
+    margin-top: 30px
+
+    margin-left: 10px
+    margin-right: 10px
+
+nav
+  ul
+    float: right
+    height: 28px
+    margin: 34px 0
+
+    font-size: 12px
+
+    > li
+      display: block
+      float: left
+      padding: 8px 0.75em 8px 0
+      margin-right: 0.75em
+      border-right: 1px solid $separator-color
+
+      &:last-child
+        padding-right: 0
+        border-right: none
+
+nav a, nav a:visited
+  color: $link-color
+  text-transform: uppercase
+  text-decoration: none
+
+nav a:hover
+  color: scale-color($link-color, $lightness: -20%)
+
+ul
+  list-style-type: none
+  padding: 0
+
+ul.objects > li
+  border: 1px solid $separator-color
+  padding: 7px
+  margin: 0
+  margin-bottom: 7px
+
+ul.client_permissions
+  > li
+    display: inline
+
+    &:not(:last-child)
+      padding-right: 0.5em
+      margin-right: 0.5em
+      border-right: 1px solid $separator-color
+
+dl
+  margin: 0
+
+dt
+  display: block
+  min-width: 120px
+  margin-right: 1em
+  float: left
+  clear: left
+
+  padding: 0.2em
+
+  font-weight: lighter
+  text-transform: uppercase
+
+  background-color: $accent-color
+  color: appropriate-text-color($accent-color)
+
+dd
+  min-height: 1.15em
+  padding: 0.2em
+  margin-bottom: 0.5em
+
+  &:last-child
+    margin-bottom: 0
+
+.client_key
+  font-family: monospace
+
+form.full
+  position: relative
+  max-width: 500px
+  margin: auto
+
+form.button_form
+  display: inline
+
+form label
+  @extend dt
+
+  width: 25%
+  clear: both
+  margin-bottom: 0.5em
+  border: 1px solid transparent // hack
+
+  + *
+    float: right
+    margin-bottom: 0.5em
+
+form
+  input:not([type]), input[type="text"], input[type="password"], select
+    background-color: $background-color
+    border: 1px solid $separator-color
+    padding: 0.2em
+    margin: 0
+    width: 65%
+
+  .client_name_group input
+    width: 200px
+
+ul.action_group
+  clear: both
+  float: right
+
+  list-style-type: none
+  margin: 0
+  padding: 0
+
+  > li
+    display: inline
+    margin-right: 3px
+
+    &:last-child
+      margin-right: 0
+
+@mixin button-color($base-color)
+  $color: scale-color($base-color, $lightness: 50%)
+
+  background-color: $color
+  color: appropriate-text-color($color)
+
+.button
+  display: inline-block
+  padding: 0.2em
+
+  font-size: 13px
+  font-weight: lighter
+  text-decoration: none
+
+  border: 1px solid $separator-color
+
+  cursor: pointer
+
+  @include button-color($separator-color)
+
+  &.negative
+    @include button-color($negative-color)
+
+  &.positive
+    @include button-color($positive-color)
+
+form.full input[type="submit"]
+  @extend .button
+
+  display: block
+  margin: auto
+  margin-top: 0.5em
+
+.username_prefix
+  color: scale-color($separator-color, $lightness: -40%)
+
+@import "custom/main"

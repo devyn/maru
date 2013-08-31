@@ -2,7 +2,8 @@ source "https://rubygems.org/"
 
 gem 'eventmachine'
 gem 'bcrypt-ruby'
-gem 'erubis'
+gem 'haml'
+gem 'sass'
 gem 'sinatra'
 gem 'thin'
 gem 'redis'

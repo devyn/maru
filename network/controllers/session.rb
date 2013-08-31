@@ -2,7 +2,7 @@ get '/session/login' do
   if logged_in?
     redirect '/'
   else
-    erb :'user/login'
+    haml :'user/login'
   end
 end
 
@@ -17,11 +17,11 @@ post '/session/login' do
         redirect(params[:redirect] || '/')
       else
         @error = "Invalid username or password."
-        erb :'user/login'
+        haml :'user/login'
       end
     else
       @error = "Invalid username or password."
-      erb :'user/login'
+      haml :'user/login'
     end
   end
 end

@@ -1,0 +1,47 @@
+- if @target_user == @user or @user.is_admin?
+  %form.full{ method: "POST" }
+    %div
+      %label{ for: 'client_name' } Client name
+      .client_name_group
+        %span.username_prefix& #{@target_user.name}/
+        %input{ name: 'client_name' }/
+
+    %div
+      %label{ for: 'permissions' } Permissions
+      %input{ name: 'permissions' }/
+
+    .clear
+
+    %div
+      %input{ type: 'submit', value: "Add a new client" }/
+
+%ul.clients.objects
+  - @target_user.clients.each do |client|
+    %li
+      %dl
+        %dt Client name
+        %dd.client_name
+          - if match = client.name.match(/^([^\/]+\/)(.*)/)
+            %span.username_prefix>&= match[1]
+            &= match[2]
+          - else
+            &= client.name
+
+        - if @target_user == @user or @user.is_admin?
+          %dt Key
+          %dd.client_key&= client.key
+
+        %dt Permissions
+        %dd
+          %ul.client_permissions
+            - client.permissions.each do |permission|
+              %li&= permission
+
+        %dt Status
+        %dd= client.active? ? "Online" : "Offline"
+
+      %ul.action_group
+        %li
+          %form.button_form{ method: 'POST', action: client_url(client) + "/delete" }
+            %input.button.negative{ type: 'submit', value: "Delete" }
+      .clear

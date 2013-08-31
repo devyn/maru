@@ -3,7 +3,7 @@ get '/users' do
 
   @users = User.all
 
-  erb :users
+  haml :users
 end
 
 post '/users' do
@@ -13,7 +13,7 @@ post '/users' do
     @error = message
     @users = User.all
 
-    halt code, erb(:users)
+    halt code, haml(:users)
   }
 
   if params[:username].to_s.strip.empty?
@@ -44,7 +44,7 @@ get '/user/:name/clients' do
   target_user_is(:name)
   must_be_admin_to_target_others!
 
-  erb :'user/clients'
+  haml :'user/clients'
 end
 
 post '/user/:name/clients' do
@@ -59,19 +59,19 @@ post '/user/:name/clients' do
   if client_name.empty?
     @error = "Client name must not be empty."
 
-    halt 422, erb(:'user/clients')
+    halt 422, haml(:'user/clients')
   end
 
   if permissions.empty?
     @error = "Must specify at least one permission."
 
-    halt 422, erb(:'user/clients')
+    halt 422, haml(:'user/clients')
   end
 
   if Client[@target_user.name + "/" + client_name]
     @error = "You have already registered a client with that name."
 
-    halt 409, erb(:'user/clients')
+    halt 409, haml(:'user/clients')
   else
     client = Client.new(@target_user.name + "/" + params[:client_name])
     
@@ -81,7 +81,7 @@ post '/user/:name/clients' do
 
     @success = "Client created successfully."
 
-    erb :'user/clients'
+    haml :'user/clients'
   end
 end
 
@@ -96,7 +96,7 @@ post '/user/:name/client/:client_name/delete' do
 
     @success = "Client deleted successfully."
 
-    erb :'user/clients'
+    haml :'user/clients'
   else
     halt 404
   end
@@ -113,7 +113,7 @@ post '/client/*/delete' do |client_name|
 
       @success = "Client deleted successfully."
 
-      erb :'user/clients'
+      haml :'user/clients'
     else
       halt 403
     end
@@ -128,7 +128,7 @@ get '/user/:name/password/change' do
   target_user_is(:name)
   must_be_admin_to_target_others!
 
-  erb :'user/password/change'
+  haml :'user/password/change'
 end
 
 post '/user/:name/password/change' do
@@ -143,7 +143,7 @@ post '/user/:name/password/change' do
     unless @user.password == params[:old_password]
       @error = "Your current password does not match the old password provided."
 
-      halt 403, erb(:'user/password/change')
+      halt 403, haml(:'user/password/change')
     end
   end
 
@@ -153,18 +153,18 @@ post '/user/:name/password/change' do
   if new_password != confirm_password
     @error = "The new password and confirm password fields differ."
 
-    halt 422, erb(:'user/password/change')
+    halt 422, haml(:'user/password/change')
   end
 
   if new_password.empty?
     @error = "Can not use an empty password."
 
-    halt 422, erb(:'user/password/change')
+    halt 422, haml(:'user/password/change')
   end
 
   @target_user.password = new_password
 
   @success = "Password changed."
 
-  erb :'user/password/change'
+  haml :'user/password/change'
 end

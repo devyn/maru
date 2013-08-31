@@ -1,0 +1,24 @@
+!!!
+
+%html
+  %head
+    %title&= settings.app_config["name"]
+    %link{ rel: "stylesheet", type: "text/css", media: "screen", href: "/stylesheets/main.css" }/
+  %body
+    #layout
+      #header
+        %a{ href: '/' }
+          %img{ src: '/images/header.png' }/
+
+        %nav
+          %ul
+            - @nav_links.each do |(title, href)|
+              %li
+                %a{ href: href }&= title
+
+      - if @error
+        #error&= @error
+      - if @success
+        #success&= @success
+
+      #content= yield

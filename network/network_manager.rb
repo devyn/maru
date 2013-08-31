@@ -4,7 +4,9 @@ require 'openssl'
 require 'bcrypt'
 require 'json'
 require 'cgi'
-require 'erubis'
+require 'haml'
+require 'sass'
+require 'sass/plugin/rack'
 require 'yaml'
 
 DEFAULT_CONFIG = {
@@ -17,6 +19,9 @@ DEFAULT_CONFIG = {
     "key_prefix" => "maru.network.mynetwork."
   }
 }
+
+Sass::Plugin.options[:style] = :compressed
+use Sass::Plugin::Rack
 
 helpers do
   include Rack::Utils
@@ -58,5 +63,5 @@ require_relative 'controllers/session'
 require_relative 'controllers/user'
 
 not_found do
-  erb :not_found
+  haml :not_found
 end

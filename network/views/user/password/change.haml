@@ -1,0 +1,18 @@
+%form.full{ method: 'POST' }
+  - if @user == @target_user
+    %div
+      %label{ for: 'old_password' } Old
+      %input{ name: 'old_password', type: 'password' }/
+
+  %div
+    %label{ for: 'new_password' } New
+    %input{ name: 'new_password', type: 'password' }/
+
+  %div
+    %label{ for: 'confirm_password' } Confirm
+    %input{ name: 'confirm_password', type: 'password' }/
+
+  .clear
+
+  %div
+    %input{ type: 'submit', value: "Change Password" }/
