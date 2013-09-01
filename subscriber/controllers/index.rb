@@ -1,5 +1,5 @@
 get '/' do
   @tasks = Task.all
 
-  erb :index
+  haml :index
 end
