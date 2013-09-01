@@ -1,9 +1,11 @@
-require 'erubis'
 require 'fileutils'
 require 'json'
 require 'rack/utils'
 require 'sinatra'
 require 'sinatra/streaming'
+require 'haml'
+require 'sass'
+require 'sass/plugin/rack'
 require 'sequel'
 require 'yaml'
 
@@ -16,6 +18,9 @@ configure do
   set :app_config, DEFAULT_CONFIG.merge(YAML.load_file("subscriber.yaml")) rescue DEFAULT_CONFIG
 
   set :db, Sequel.connect(settings.app_config["database"])
+
+  Sass::Plugin.options[:style] = :compressed
+  use Sass::Plugin::Rack
 end
 
 helpers do
