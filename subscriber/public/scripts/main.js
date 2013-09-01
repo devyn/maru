@@ -19,36 +19,47 @@ function insert_div_class_text(class_name, text, destination) {
 }
 
 function ease_in(el) {
-  el.style.transition = "opacity ease 0.5s, height ease 0.5s, padding ease 0.5s";
-  el.style.height     = "0";
-  el.style.padding    = "0";
-  el.style.opacity    = "0.0";
+  $(el).css({
+    transition: "opacity ease 0.5s, height ease 0.5s, padding ease 0.5s",
+    height:     0,
+    padding:    0,
+    opacity:    0
+  });
 
   setTimeout(function () {
-    el.style.height  = null;
-    el.style.padding = null;
-    el.style.opacity = "1.0";
+    $(el).css({
+      height:  "",
+      padding: "",
+      opacity: 1
+    });
 
     setTimeout(function () {
-      el.style.transition = null;
-      el.style.opacity = null;
+      $(el).css({
+        transition: "",
+        opacity: ""
+      });
     }, 500);
   }, 0);
 }
 
-function ease_out(el) {
-  el.style.transition = "opacity ease 0.5s, height ease 0.5s, padding ease 0.5s";
-  el.style.height     = null;
-  el.style.padding    = null;
-  el.style.opacity    = "1.0";
+function ease_out(el, callback) {
+  $(el).css({
+    transition: "opacity ease 0.5s, height ease 0.5s, padding ease 0.5s",
+    height:     "",
+    padding:    "",
+    opacity:    1
+  });
 
   setTimeout(function () {
-    el.style.height  = "0";
-    el.style.padding = "0";
-    el.style.opacity = "0.0";
+    $(el).css({
+      height:  0,
+      padding: 0,
+      opacity: 0
+    });
 
     setTimeout(function () {
-      el.parentNode.removeChild(el);
+      if (typeof callback === 'function')
+        callback(el);
     }, 500);
   }, 0);
 }
@@ -234,7 +245,9 @@ function tasks_jobsubmitted(e) {
     task.recent_jobs.pop();
 
     if (selected_task_id === task.id) {
-      ease_out($("#jobs > *:last-child")[0]);
+      ease_out($("#jobs > *:last-child"), function (el) {
+        el.remove();
+      });
     }
   }
 
