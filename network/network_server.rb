@@ -340,7 +340,8 @@ module Maru
                   # Authentication is successful. Enable client.
                   @type = @hello["type"].to_sym
                 else
-
+                  # Client is not authorized for the connection type.
+                  critical :Unauthorized
                 end
               else
                 # Not successful. Close connection.
