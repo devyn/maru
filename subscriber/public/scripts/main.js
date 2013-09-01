@@ -259,7 +259,7 @@ function tasks_jobsubmitted(e) {
     task.recent_jobs.pop();
 
     if (selected_task_id === task.id) {
-      ease_out($("#jobs > *:last-child"), function (el) {
+      ease_out($("#jobs")[0].children[9], function (el) {
         el.remove();
       });
     }
