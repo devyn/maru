@@ -64,6 +64,10 @@ end
 post "/tasks" do
   content_type 'application/json'
 
+  if params[:total_jobs] and params[:total_jobs].to_i < 1
+    params[:total_jobs] = nil
+  end
+
   @task = Task.new(
     name:       params[:name],
     secret:     "%032x" % rand(16**32),
@@ -73,7 +77,7 @@ post "/tasks" do
   if @task.save
     task_event "taskcreated", {id: @task.id, name: @task.name, total_jobs: @task.total_jobs}
 
-    {id: @task.id, secret: @task.secret}.to_json
+    {id: @task.id, secret: @task.secret, submit_to: URI.join(request.url, "/task/#{@task.secret}/submit")}.to_json
   else
     [400, {errors: @task.errors.to_json}]
   end

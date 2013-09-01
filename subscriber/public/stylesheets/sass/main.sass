@@ -9,6 +9,13 @@ html, body
 .clear_both
   clear: both
 
+a, a:visited
+  color: #ffffff
+  text-decoration: none
+  cursor: pointer
+a:hover
+  text-decoration: underline
+
 nav
   height: 1.5em
   width: auto
@@ -24,7 +31,7 @@ nav
 
 #nav_left
   position: absolute
-  left: 0.25em
+  left: 15px
   top: 0.25em
   bottom: 0.25em
 
@@ -35,7 +42,7 @@ nav
 
 #nav_right
   position: absolute
-  right: 0.25em
+  right: 15px
   top: 0.25em
   bottom: 0.25em
 
@@ -48,6 +55,90 @@ nav
     display: inline-block
     padding: 0
     margin: 0
+
+@mixin vendor-prefix($property, $value)
+  #{$property}: $value
+  -webkit-#{$property}: $value
+  -moz-#{$property}: $value
+  -ms-#{$property}: $value
+  -o-#{$property}: $value
+
+.callout_popup
+  position: absolute
+  z-index: 1000
+  width: 300px
+  padding: 25px
+  top: 42px
+  right: -10px
+
+  background-color: #ffffff
+  color: #000000
+
+  $callout-border: 1px solid #000000
+  border: $callout-border
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5)
+
+  opacity: 0
+  transition: opacity ease-out 0.4s
+
+  display: none
+
+  &.show
+    display: block
+    opacity: 1
+
+  &::before
+    content: ""
+    width: 25px
+    height: 25px
+    background-color: #ffffff
+    position: absolute
+    top: -14px
+    right: 25px
+
+    border-top: $callout-border
+    border-left: $callout-border
+
+    box-shadow: -5px -5px 5px rgba(0, 0, 0, 0.3)
+
+    @include vendor-prefix(transform, rotate(45deg))
+
+.field_group
+  clear: both
+  margin-bottom: 10px
+
+  label
+    float: left
+    display: block
+    padding: 0.2em
+
+  input
+    float: right
+    margin: 0
+    padding: 0.2em
+    border: 1px solid #ddd
+
+    @include vendor-prefix(box-sizing, border-box)
+
+  .end
+    clear: both
+
+.button
+  display: inline-block
+  padding: 0.3em
+  border: 1px solid #ddd
+  background-color: #eeeeee
+  color: #000000
+  cursor: pointer
+
+input[type='submit']
+  @extend .button
+
+#new_task
+  input[name='name']
+    width: 200px
+  input[name='total_jobs']
+    width: 50px
 
 #tasks
   background-color: #bbbbbb
@@ -147,6 +238,16 @@ nav
     font-weight: bold
     color: #eee
 
+  .submit_to
+    display: block
+    margin: 0
+    margin-bottom: 7px
+    word-wrap: break-word
+
+    background-color: #ddccee
+    color: #222
+    padding: 10px
+
 #jobs
   display: block
   padding: 0
@@ -154,6 +255,8 @@ nav
 
   &:empty::after
     content: "No jobs submitted."
+    display: block
+    margin: 10px 0
 
   li
     display: block
@@ -165,7 +268,7 @@ nav
 
     clear: both
 
-    margin-bottom: 0.5em
+    margin-bottom: 7px
 
     overflow: hidden
 

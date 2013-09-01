@@ -2,7 +2,8 @@ var event_source;
 
 var tasks = {};
 
-var selected_task_id = null;
+var selected_task_id = null
+  , created_task_id  = null;
 
 function insert_tag_class_text(tag_name, class_name, text, destination) {
   var el = document.createElement(tag_name);
@@ -138,6 +139,12 @@ function show_details() {
 
     insert_tag_class_text("h1", "", task.name, $("#details"));
 
+    if (localStorage["task_secret_info:" + selected_task_id]) {
+      var info = JSON.parse(localStorage["task_secret_info:" + selected_task_id]);
+
+      insert_tag_class_text("code", "submit_to", info.submit_to, $("#details"));
+    }
+
     var jobs = insert_tag_class_text("ul", "", null, $("#details"));
     jobs.id = "jobs";
 
@@ -227,6 +234,13 @@ function tasks_taskcreated(e) {
   task.recent_jobs    = [];
 
   create_task_element(task);
+
+  if (created_task_id === task.id) {
+    console.log(['created_task_id', task.id]);
+    setTimeout(function () {
+      select_task(task);
+    }, 0);
+  }
 }
 
 function tasks_jobsubmitted(e) {
@@ -283,11 +297,52 @@ function tasks_jobsubmitted(e) {
   }, 0);
 }
 
-window.addEventListener("load", function () {
+$(function() {
   // establish event source
   event_source = new EventSource("/tasks.event-stream");
 
   event_source.addEventListener("reload",       tasks_reload);
   event_source.addEventListener("taskcreated",  tasks_taskcreated);
   event_source.addEventListener("jobsubmitted", tasks_jobsubmitted);
+
+  // register actions
+  $(document).click(function() {
+    $(".callout_popup").removeClass("show");
+    setTimeout(function () {
+      $(".callout_popup").css({display: ''});
+    }, 400);
+  });
+  $(".callout_popup").click(function (e) {
+    e.stopPropagation();
+  });
+
+  $("#new_task_link").click(function (e) {
+    $("#new_task").css({display: 'block'});
+    $("#new_task input[name='name']").val("").focus();
+    $("#new_task input[name='total_jobs']").val("");
+
+    setTimeout(function () {
+      $("#new_task").addClass("show");
+    }, 0);
+
+    e.stopPropagation();
+  });
+  $("#new_task form").submit(function (e) {
+    e.preventDefault();
+
+    $.post('/tasks', $(this).serialize(), function (response) {
+      localStorage["task_secret_info:" + response.id] = JSON.stringify(response);
+
+      if (tasks.hasOwnProperty(response.id)) {
+        select_task(tasks[response.id]);
+      } else {
+        created_task_id = response.id;
+      }
+
+      $("#new_task").removeClass("show");
+      setTimeout(function () {
+        $("#new_task").css({display: ''})
+      }, 400);
+    });
+  });
 });

@@ -1,0 +1,13 @@
+#new_task.callout_popup
+  %form
+    .field_group
+      %label Name
+      %input{ name: 'name' }
+      .end
+
+    .field_group
+      %label Size (in jobs; optional)
+      %input{ name: 'total_jobs' }
+      .end
+
+    %input{ type: 'submit', value: 'Create task' }
