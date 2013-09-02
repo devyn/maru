@@ -265,7 +265,7 @@ module Maru
             @worker.log.network_connection_failed @name, "critical error: #@critical. Will retry in 10 seconds."
 
             EventMachine.add_timer(10) do
-              EventMachine.reconnect(@host, @port, self)
+              EventMachine.connect(@host, @port, NetworkClient, @worker, @host, @port, @client_name, @key)
             end
           end
 
@@ -275,7 +275,7 @@ module Maru
             @worker.log.network_connection_failed "#@host:#@port", "could not connect. Will retry in 10 seconds."
 
             EventMachine.add_timer(10) do
-              EventMachine.reconnect(@host, @port, self)
+              EventMachine.connect(@host, @port, NetworkClient, @worker, @host, @port, @client_name, @key)
             end
           end
         end
