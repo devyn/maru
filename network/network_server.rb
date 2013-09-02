@@ -108,7 +108,7 @@ module Maru
 
     def subscribe_redis
       Thread.start do
-        @redis_sub.subscribe(key("available_jobs"), key("clients")) do |on|
+        @redis_sub.subscribe(key("available_jobs"), key("assigned_jobs"), key("clients")) do |on|
           on.message do |channel,message|
             case channel
             when key("available_jobs")
@@ -119,6 +119,19 @@ module Maru
                   client.send_command "job_available"
                 end
                 @waitlist.delete type
+              end
+            when key("assigned_jobs")
+              case message
+              when /^aborted:(\d+):(.*)/
+                id, worker_name = $1.to_i, $2
+
+                EventMachine.next_tick do
+                  @clients.each do |client|
+                    if client.type == :worker and client.name == worker_name
+                      client.send_command "abort", id
+                    end
+                  end
+                end
               end
             when key("clients")
               case message
@@ -148,32 +161,50 @@ module Maru
 
       until types.empty?
         type = types.delete_at rand(types.length)
-        id = @redis.spop key("available_jobs:#{type}")
-        if id
-          @redis.sadd key("assigned_jobs:#{worker_name}"), id
 
-          job = JSON.parse(@redis.hget(key("jobs"), id))
+        # The loop is just in case we find jobs that don't exist
+        # due to an unclean database.
+        loop do
+          id = @redis.spop key("available_jobs:#{type}")
+          if id
+            job = @redis.hget(key("jobs"), id)
 
-          @log.assigning job, worker_name
+            # If the database isn't clean, sometimes available_jobs
+            # contains jobs that don't exist. For obvious reasons,
+            # we need to skip those. This will remove those entries
+            # as well due to the SPOP above.
+            next unless job
 
-          return job
+            job = JSON.parse(job)
+
+            @redis.sadd key("assigned_jobs:#{worker_name}"), id
+            @redis.hset key("jobs(worker)"), id, worker_name
+
+            @log.assigning job, worker_name
+
+            return job
+          else
+            break
+          end
         end
       end
       nil
     end
 
-    def submit(job_json)
+    def submit(producer_name, job_json)
       # ensure destination URI is valid
 
       begin
         URI.parse(job_json["destination"])
       rescue
-        return nil
+        return false
       end
 
       # get next ID
 
       job_json["id"] = id = @redis.incr(key("next_job_id")).to_i
+
+      job_json["producer"] = producer_name
 
       @redis.multi do
         # add to job description map
@@ -191,9 +222,72 @@ module Maru
       return id
     end
 
+    def abort_job(id, &callback)
+      if worker_name = @redis.hget(key("jobs(worker)"), id)
+        @redis.multi do
+          @redis.srem(key("assigned_jobs:#{worker_name}"), id)
+          @redis.hdel(key("jobs(worker)"), id)
+
+          @redis.publish(key("assigned_jobs"), "aborted:#{id}:#{worker_name}")
+        end
+      end
+
+      true
+    end
+
+    def cancel(producer_name, id)
+      if @redis.hexists(key("failed_jobs"), id)
+        @redis.multi do
+          @redis.hdel(key("jobs"), id)
+          @redis.hdel(key("failed_jobs"), id)
+        end
+        true
+      elsif job_json_string = @redis.hget(key("jobs"), id)
+        job_json = JSON.parse(job_json_string)
+
+        if job_json["producer"] == producer_name
+          abort_job(id)
+
+          @redis.multi do
+            @redis.hdel(key("jobs"), id)
+          end
+
+          true
+        else
+          :not_owner
+        end
+      elsif @redis.sismember(key("completed_jobs"), id)
+        :job_already_completed
+      else
+        :not_found
+      end
+    end
+
+    def retry(producer_name, id)
+      if @redis.hexists(key("failed_jobs"), id)
+        if job_json_string = @redis.hget(key("jobs"), id)
+          job_json = JSON.parse(job_json_string)
+
+          if job_json["producer"] == producer_name
+            @redis.multi do
+              @redis.sadd(key("available_jobs:#{job_json["type"]}"), id)
+              @redis.publish("available_jobs", "#{id}:#{job_json["type"]}")
+            end
+
+            true
+          else
+            :not_owner
+          end
+        end
+      else
+        :job_not_failed
+      end
+    end
+
     def completed(worker_name, id)
       if @redis.srem(key("assigned_jobs:#{worker_name}"), id)
         @redis.multi do
+          @redis.hdel(key("jobs(worker)"), id)
           @redis.hdel(key("jobs"), id)
           @redis.sadd(key("completed_jobs"), id)
         end
@@ -207,7 +301,10 @@ module Maru
 
     def failed(worker_name, id, message)
       if @redis.srem(key("assigned_jobs:#{worker_name}"), id)
-        @redis.hset(key("failed_jobs"), id, message)
+        @redis.multi do
+          @redis.hdel(key("jobs(worker)"), id)
+          @redis.hset(key("failed_jobs"), id, message)
+        end
 
         @log.failed(worker_name, id, message)
         true
@@ -220,19 +317,18 @@ module Maru
       if @redis.srem(key("assigned_jobs:#{worker_name}"), id)
         job_json = JSON.parse(@redis.hget(key("jobs"), id))
 
-        @redis.sadd(key("available_jobs:#{job_json["type"]}"), id)
+        @redis.multi do
+          @redis.hdel(key("jobs(worker)"), id)
+          @redis.sadd(key("available_jobs:#{job_json["type"]}"), id)
 
-        @redis.publish key("available_jobs"), "#{id}:#{job_json["type"]}"
+          @redis.publish key("available_jobs"), "#{id}:#{job_json["type"]}"
+        end
 
         @log.reject(worker_name, id)
         true
       else
         false
       end
-    rescue
-      p $!
-      puts $!.backtrace
-      raise $!
     end
 
     def reject_all(worker_name)
@@ -245,6 +341,7 @@ module Maru
 
         @redis.multi do
           jobs.each do |(id, job_json)|
+            @redis.hdel(key("jobs(worker)"), id)
             @redis.sadd(key("available_jobs:#{job_json["type"]}"), id)
 
             @redis.publish key("available_jobs"), "#{id}:#{job_json["type"]}"
@@ -408,12 +505,32 @@ module Maru
       def receive_producer_command(result, name, *args)
         case name
         when "submit"
-          id = @network.submit(args[0])
+          id = @network.submit(@name, args[0])
 
           if id
             result.succeed(id)
           else
             result.fail(name: "InvalidJob", message: "job data malformed")
+          end
+        when "cancel"
+          case @network.cancel(@name, args[0])
+          when :not_owner
+            result.fail(name: "Unauthorized", message: "you did not submit that job")
+          when :not_found
+            result.fail(name: "NotFound", message: "the job was not found")
+          when :job_already_completed
+            result.fail(name: "InvalidOperation", message: "the job has already been completed")
+          else
+            result.succeed(nil)
+          end
+        when "retry"
+          case @network.retry(@name, args[0])
+          when :not_owner
+            result.fail(name: "Unauthorized", message: "you did not submit that job")
+          when :job_not_failed
+            result.fail(name: "InvalidOperation", message: "the job has not yet failed or does not exist")
+          else
+            result.succeed(nil)
           end
         else
           result.unrecognized_command!

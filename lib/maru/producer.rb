@@ -9,14 +9,14 @@ module Maru
     include Maru::JSONProtocol
     include EventMachine::Deferrable
 
-    def self.connect(host, port, client_name, client_key, payload, &block)
-      EventMachine.connect(host, port, self, client_name, client_key, payload, &block)
+    def self.connect(host, port, client_name, client_key, action, &block)
+      EventMachine.connect(host, port, self, client_name, client_key, action, &block)
     end
 
-    def initialize(client_name, client_key, payload)
+    def initialize(client_name, client_key, action)
       @client_name = client_name
       @client_key  = client_key
-      @payload     = payload
+      @action      = action
     end
 
     def post_protocol_init
@@ -39,7 +39,7 @@ module Maru
           if challenge.verify(response)
             @network_verified = true
             if @self_verified
-              submit_payload
+              self.send(*@action)
             end
           else
             critical  :AuthenticationFailure
@@ -59,12 +59,46 @@ module Maru
       end
     end
 
-    def submit_payload
-      remaining = @payload.count
+    def submit(payload)
+      remaining = payload.count
       errors    = []
+      jobs      = []
 
-      @payload.each do |job_json|
-        send_command("submit", job_json).callback {
+      payload.each do |job_json|
+        send_command("submit", job_json).callback { |id|
+          remaining -= 1
+
+          $stdout << '.'
+          $stdout.flush
+
+          jobs << id
+
+          if remaining == 0
+            $stdout.puts
+            self.succeed(errors, jobs)
+          end
+        }.errback { |error|
+          remaining -= 1
+
+          $stdout << 'F'
+          $stdout.flush
+
+          errors << error.update("job" => job_json)
+
+          if remaining == 0
+            $stdout.puts
+            self.succeed(errors, jobs)
+          end
+        }
+      end
+    end
+
+    def cancel(*ids)
+      remaining = ids.count
+      errors = []
+
+      ids.each do |id|
+        send_command("cancel", id).callback {
           remaining -= 1
 
           $stdout << '.'
@@ -80,7 +114,8 @@ module Maru
           $stdout << 'F'
           $stdout.flush
 
-          errors << error.update("job" => job_json)
+          errors << error.update("id" => id)
+
           if remaining == 0
             $stdout.puts
             self.succeed(errors)

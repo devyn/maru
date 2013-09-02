@@ -18,10 +18,12 @@ module Devyn
     end
 
     def process_job(job)
-      job.description["results"].each do |file, body|
-        job.info "Add result: #{file}"
+      if job.description["results"]
+        job.description["results"].each do |file, body|
+          job.info "Add result: #{file}"
 
-        job.result file, body
+          job.result file, body
+        end
       end
 
       if job.description["external"]

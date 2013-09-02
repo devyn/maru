@@ -84,6 +84,10 @@ module Maru
         job_warn "\e[1;31mJob error: \e[0;31m%s" % msg, options
       end
 
+      def job_aborted
+        job_warn "Job aborted by network"
+      end
+
       def job_info(msg, options={})
         info "  #{msg}", options
       end
@@ -159,6 +163,15 @@ module Maru
         end
       end
 
+      def abort
+        if @incomplete
+          EventMachine.next_tick { @thread.kill }
+
+          @worker.log.job_aborted
+          @on_finish.(:aborted)
+        end
+      end
+
       def submit
         if @incomplete
           @worker.log.job_uploading_to(@destination)
@@ -180,21 +193,21 @@ module Maru
                 "X-Maru-Network-Id"      => @network.name
               }
             )
+
+            if res.code == 200
+              @incomplete = false
+
+              EventMachine.next_tick do
+                @network.send_command("completed", @id)
+
+                @worker.log.job_completed
+                @on_finish.(:completed)
+              end
+            else
+              error("while trying to submit results: HTTP error #{res.code}: #{res.reason}")
+            end
           rescue
             error("while trying to submit results: #{$!.message}")
-          end
-
-          if res.code == 200
-            @incomplete = false
-
-            EventMachine.next_tick do
-              @network.send_command("completed", @id)
-
-              @worker.log.job_completed
-              @on_finish.(:completed)
-            end
-          else
-            error("while trying to submit results: HTTP error #{res.code}: #{res.reason}")
           end
         end
       end
@@ -309,6 +322,12 @@ module Maru
           end
 
           result.succeed(nil)
+        when "abort"
+          if @worker.job.id == args[0]
+            @worker.job.abort
+          end
+
+          result.succeed(nil)
         end
       end
 
@@ -322,7 +341,7 @@ module Maru
       end
     end
 
-    attr_reader :config, :name, :log, :http, :waiting_for_work
+    attr_reader :config, :name, :log, :http, :waiting_for_work, :job
 
     def initialize(config={})
       @config = DEFAULT_CONFIG.merge(config)
@@ -411,8 +430,7 @@ module Maru
           res.callback do |job_json|
             @log.job_received network.name, job_json
 
-            prereq_results = acquire_prerequisites(job_json)
-            process_job(job_json, network, prereq_results)
+            process_job(job_json, network)
           end
 
           res.errback do |err|
@@ -488,7 +506,7 @@ module Maru
       return prereq_results
     end
 
-    def process_job(job_json, network, prereq_results)
+    def process_job(job_json, network)
       temp_path = File.join(@config["temp_dir"], "jobs", "%032x" % rand(16**32))
 
       @job = Job.new(job_json, network, self) do |status, error_message|
@@ -496,8 +514,6 @@ module Maru
 
         get_work
       end
-
-      @job.prerequisites = prereq_results
 
       begin
         URI.parse(@job.destination)
@@ -507,6 +523,8 @@ module Maru
 
       @job.thread = Thread.start do
         begin
+          @job.prerequisites = acquire_prerequisites(job_json)
+
           FileUtils.mkdir_p temp_path
 
           Dir.chdir temp_path do

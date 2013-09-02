@@ -70,6 +70,10 @@ module Maru
 
               receive_command(res, input["command"], *input["arguments"])
             rescue
+              warn "BUG: Maru JSON Protocol intercepted error!"
+              warn "  #{$!.class.name}: #{$!.message}"
+              warn $!.backtrace.map { |s| "    " << s }
+
               send_data({reply: input["id"], error: {name: "InternalServerError", message: "#{$!.class.name}: #{$!.message}"}}.to_json << "\n")
             end
           elsif input["reply"] and @command_results[input["reply"]]
