@@ -108,7 +108,7 @@ module Maru
 
     def subscribe_redis
       Thread.start do
-        @redis_sub.subscribe(key("available_jobs"), key("assigned_jobs"), key("clients")) do |on|
+        @redis_sub.subscribe(key("available_jobs"), key("assigned_jobs"), key("clients"), key("active_clients")) do |on|
           on.message do |channel,message|
             case channel
             when key("available_jobs")
@@ -139,6 +139,27 @@ module Maru
                 client_name = $1
 
                 EventMachine.next_tick { client_was_deleted(client_name) }
+              end
+            when key("active_clients")
+              case message
+              when /^disconnected:(.*)/
+                client_name = $1
+
+                if @clients.find { |client| client.name == client_name }
+                  # When a client disconnects from a network, its name is
+                  # removed from the active_clients set. However, though
+                  # discouraged when trivially avoidable, multiple clients
+                  # with the same name are allowed to be connected at the
+                  # same time.
+                  #
+                  # As multiple network processes may also run in order to
+                  # handle load balancing better in some cases, if the client
+                  # is still connected when it is removed from the
+                  # active_clients set, it must be re-added to the set in
+                  # order to report the status of the client properly.
+
+                  @redis.sadd(key("active_clients"), client_name)
+                end
               end
             end
           end
@@ -358,8 +379,28 @@ module Maru
       @clients << client
     end
 
+    def client_ready(client)
+      # Notify other database users
+      @redis.multi do
+        @redis.sadd(key("active_clients"), client.name)
+        @redis.publish(key("active_clients"), "connected:#{client.name}")
+      end
+    end
+
     def unregister_client(client)
       @clients.delete client
+
+      if client.ready?
+        # Notify other database users
+        @redis.multi do
+          @redis.srem(key("active_clients"), client.name)
+
+          # If the client is still connected to any other network processes,
+          # that process is expected to SADD the name to active_clients again,
+          # but must not publish that it has connected
+          @redis.publish(key("active_clients"), "disconnected:#{client.name}")
+        end
+      end
     end
 
     def client_was_deleted(client_name)
@@ -436,6 +477,7 @@ module Maru
                 if @info["permissions"].include? @hello["type"]
                   # Authentication is successful. Enable client.
                   @type = @hello["type"].to_sym
+                  @network.client_ready self
                 else
                   # Client is not authorized for the connection type.
                   critical :Unauthorized
@@ -535,6 +577,10 @@ module Maru
         else
           result.unrecognized_command!
         end
+      end
+
+      def ready?
+        @type ? true : false
       end
     end
 

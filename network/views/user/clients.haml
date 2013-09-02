@@ -38,7 +38,10 @@
               %li&= permission
 
         %dt Status
-        %dd= client.active? ? "Online" : "Offline"
+        - if client.active?
+          %dd.online Online
+        - else
+          %dd.offline Offline
 
       %ul.action_group
         %li
