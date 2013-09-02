@@ -44,6 +44,10 @@ module Maru
         warn "Failed to connect to network '\e[35m%s\e[33m': %s" % [name, msg]
       end
 
+      def waiting_for_work
+        info "No work available. Standing by."
+      end
+
       def exiting
         info "Exiting"
       end
@@ -439,6 +443,8 @@ module Maru
             if remaining > 0
               try.()
             else
+              @log.waiting_for_work
+
               @waiting_for_work = true
             end
           end
@@ -448,6 +454,8 @@ module Maru
       if remaining > 0
         try.()
       else
+        @log.waiting_for_work
+
         @waiting_for_work = true
       end
     end
