@@ -1,4 +1,5 @@
 require 'json'
+require 'eventmachine'
 
 module Maru
   module JSONProtocol
