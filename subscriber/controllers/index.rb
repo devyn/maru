@@ -1,5 +1,9 @@
-get '/' do
-  @tasks = Task.all
+module Maru
+  class Subscriber
+    get '/' do
+      @tasks = Task.all
 
-  haml :index
+      haml :index
+    end
+  end
 end
