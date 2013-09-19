@@ -29,9 +29,9 @@ module Maru
       when "hello"
         hello = args[0]
 
-        if hello["type"] != @client_type
+        if hello["type"] != @remote_type
           critical  :UnexpectedConnectionType
-          self.fail "the server is not a #@client_type (type=#{hello["type"]})"
+          self.fail "the server is not a #@remote_type (type=#{hello["type"]})"
         end
 
         challenge = Maru::Authentication::Challenge.new(@client_key)

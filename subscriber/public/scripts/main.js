@@ -297,6 +297,69 @@ function tasks_jobsubmitted(e) {
   }, 0);
 }
 
+function init_new_task() {
+  $("#new_task_link").click(function (e) {
+    $("#click_catcher, #new_task").css({display: 'block'});
+
+    /* reset to default state */
+    $("#new_task .setup, #new_task .setup .if_empty").show();
+    $("#new_task .setup .if_not_empty, #new_task .configure").hide();
+    $("#new_task .configure .producer_form").empty();
+    $("#new_task select option").prop("selected", false);
+    $("#new_task select option:first").prop("selected", true);
+    $("#new_task input").val("");
+    $("#new_task input:checked").prop("checked", false);
+    $("#new_task input[name='name']").focus();
+
+    setTimeout(function () {
+      $("#click_catcher, #new_task").addClass("show");
+    }, 0);
+
+    e.stopPropagation();
+  });
+
+  $("#new_task #create_button").click(function (e) {
+    $.post('/tasks', $("#new_task form").serialize(), function (response) {
+      localStorage["task_secret_info:" + response.id] = JSON.stringify(response);
+
+      if (tasks.hasOwnProperty(response.id)) {
+        select_task(tasks[response.id]);
+      } else {
+        created_task_id = response.id;
+      }
+
+      $("#click_catcher, #new_task").removeClass("show");
+      setTimeout(function () {
+        $("#click_catcher, #new_task").css({display: ''})
+      }, 200);
+    });
+  });
+
+  $("#new_task select[name='producer']").change(function (e) {
+    if ($(this).val() === '') {
+
+      $("#new_task .setup .if_empty")    .show();
+      $("#new_task .setup .if_not_empty").hide();
+    } else {
+
+      $("#new_task .setup .if_empty")    .hide();
+      $("#new_task .setup .if_not_empty").show();
+    }
+  });
+
+  $("#new_task #configure_button").click(function (e) {
+    $.get("/producer/" +
+      $("#new_task select[name='producer']").val() + "/form",
+
+      function (form) {
+
+        $("#new_task .configure .producer_form").html(form);
+        $("#new_task .configure").show();
+        $("#new_task .setup").hide();
+      });
+  });
+}
+
 $(function() {
   // establish event source
   event_source = new EventSource("/tasks.event-stream");
@@ -306,43 +369,15 @@ $(function() {
   event_source.addEventListener("jobsubmitted", tasks_jobsubmitted);
 
   // register actions
-  $(document).click(function() {
-    $(".callout_popup").removeClass("show");
+  $("#click_catcher").click(function() {
+    $("#click_catcher, .popup_window").removeClass("show");
     setTimeout(function () {
-      $(".callout_popup").css({display: ''});
-    }, 400);
+      $("#click_catcher, .popup_window").css({display: ''});
+    }, 200);
   });
-  $(".callout_popup").click(function (e) {
+  $(".popup_window").click(function (e) {
     e.stopPropagation();
   });
 
-  $("#new_task_link").click(function (e) {
-    $("#new_task").css({display: 'block'});
-    $("#new_task input[name='name']").val("").focus();
-    $("#new_task input[name='total_jobs']").val("");
-
-    setTimeout(function () {
-      $("#new_task").addClass("show");
-    }, 0);
-
-    e.stopPropagation();
-  });
-  $("#new_task form").submit(function (e) {
-    e.preventDefault();
-
-    $.post('/tasks', $(this).serialize(), function (response) {
-      localStorage["task_secret_info:" + response.id] = JSON.stringify(response);
-
-      if (tasks.hasOwnProperty(response.id)) {
-        select_task(tasks[response.id]);
-      } else {
-        created_task_id = response.id;
-      }
-
-      $("#new_task").removeClass("show");
-      setTimeout(function () {
-        $("#new_task").css({display: ''})
-      }, 400);
-    });
-  });
+  init_new_task();
 });

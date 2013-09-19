@@ -63,23 +63,20 @@ nav
   -ms-#{$property}: $value
   -o-#{$property}: $value
 
-.callout_popup
-  position: absolute
-  z-index: 1000
-  width: 300px
-  padding: 25px
-  top: 42px
-  right: -10px
+#click_catcher
+  position: fixed
+  z-index: 999
+  width: 100%
+  height: 100%
 
-  background-color: #ffffff
-  color: #000000
+  top: 0
+  right: 0
+  left: 0
+  bottom: 0
 
-  $callout-border: 1px solid #000000
-  border: $callout-border
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5)
-
+  background-color: rgba(0, 0, 0, 0.5)
   opacity: 0
-  transition: opacity ease-out 0.4s
+  transition: opacity ease-out 0.2s
 
   display: none
 
@@ -87,41 +84,84 @@ nav
     display: block
     opacity: 1
 
-  &::before
-    content: ""
-    width: 25px
-    height: 25px
-    background-color: #ffffff
-    position: absolute
-    top: -14px
-    right: 25px
+.popup_window
+  position: fixed
+  z-index: 1000
+  width: 640px
+  height: 480px
+  padding: 25px
 
-    border-top: $callout-border
-    border-left: $callout-border
+  top: 0
+  right: 0
+  left: 0
+  bottom: 0
 
-    box-shadow: -5px -5px 5px rgba(0, 0, 0, 0.3)
+  margin: auto
 
-    @include vendor-prefix(transform, rotate(45deg))
+  background-color: #333
+  color: #ddd
 
-.field_group
-  clear: both
-  margin-bottom: 10px
+  border: 1px solid #748
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5)
 
-  label
-    float: left
+  opacity: 0
+  transition: opacity ease-out 0.2s
+
+  display: none
+
+  &.show
     display: block
-    padding: 0.2em
+    opacity: 1
 
-  input
-    float: right
-    margin: 0
-    padding: 0.2em
+  h1
+    margin-top: 0
+    margin-bottom: 1em
+    font-size: 1.5em
+    text-align: center
+
+  form
+    margin: 50px 0 0 50px
+    padding-right: 50px
+    height: 380px
+    overflow: auto
+
+.checkbox_group, .field_group
+  margin-bottom: 30px
+  &:last-child
+    margin-bottom: 0
+
+.group_box
+  margin-top: 0.3em
+  margin-bottom: 30px
+
+  padding: 1em
+  border: 1px solid #555
+
+*:last-child > .group_box
+  margin-bottom: 0
+
+.prerequisite_field_group, .field_group
+  label
+    margin: 0.3em 0
+    font-size: 0.85em
+    display: block
+
+  &.required > label::after
+    content: '*'
+
+  input, select
+    margin: 0.2em 0
+    padding: 0.3em
+    font-size: 1.1em
     border: 1px solid #ddd
+    width: 100%
 
     @include vendor-prefix(box-sizing, border-box)
 
-  .end
-    clear: both
+    &.number, &.numbers
+      width: 40%
+
+
 
 .button
   display: inline-block
@@ -131,14 +171,23 @@ nav
   color: #000000
   cursor: pointer
 
+  &::after
+    content: ' \203a'
+
+a.button:hover
+  text-decoration: none !important
+
 input[type='submit']
   @extend .button
 
 #new_task
-  input[name='name']
-    width: 200px
-  input[name='total_jobs']
-    width: 50px
+  .if_not_empty
+    display: none
+  .configure
+    display: none
+
+    .producer_form
+      margin-bottom: 30px
 
 #tasks
   background-color: #bbbbbb

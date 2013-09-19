@@ -73,13 +73,27 @@ module Maru
       @task = Task.new(
         name:       params[:name],
         secret:     "%032x" % rand(16**32),
-        total_jobs: params[:total_jobs]
+        total_jobs: (params[:producer] ? nil : params[:total_jobs])
       )
 
       if @task.save
         task_event "taskcreated", {id: @task.id, name: @task.name, total_jobs: @task.total_jobs}
 
-        {id: @task.id, secret: @task.secret, submit_to: URI.join(request.url, "/task/#{@task.secret}/submit")}.to_json
+        result = {id: @task.id, secret: @task.secret, submit_to: URI.join(request.url, "/task/#{@task.secret}/submit")}
+
+        if !params[:producer].nil? and !params[:producer].strip.empty? and
+           (@producer_task = settings.producer_tasks[params[:producer]])
+
+          # Don't return until we're finished production.
+          stream :keep_open do |out|
+            run_producer_on(@producer_task, @task) {
+              out << result.to_json
+              out.close
+            }
+          end
+        else
+          result.to_json
+        end
       else
         [400, {errors: @task.errors.to_json}]
       end
@@ -105,7 +119,19 @@ module Maru
               }
             }
           }
+        }.sort { |task1, task2|
+          if task1[:recent_jobs].empty?
+            -1
+          elsif task2[:recent_jobs].empty?
+            1
+          else
+            task1[:recent_jobs].first[:submitted_at] <=> task2[:recent_jobs].first[:submitted_at]
+          end
         }
+      end
+
+      def force_tasks_reload
+        task_event "reload", dump_all_tasks
       end
     end
 

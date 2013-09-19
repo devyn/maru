@@ -24,7 +24,10 @@ module Maru
       "database"    => "sqlite://subscriber.db",
       "data_dir"    => "data",
       "plugin_path" => File.expand_path(File.join(File.dirname(__FILE__), "plugins")),
-      "plugins"     => []
+      "plugins"     => [],
+      "producer"    => {
+        "networks"  => []
+      }
     }
 
     set :app_config, DEFAULT_CONFIG.dup
@@ -87,8 +90,21 @@ module Maru
     configure do
       set :bind,              settings.app_config["host"]
       set :port,              settings.app_config["port"]
-      set :environment,       settings.app_config["environment"]
+      set :environment,       settings.app_config["environment"].to_sym
       set :db, Sequel.connect(settings.app_config["database"])
+
+      # ugh, so ugly
+      set :networks, settings.app_config["producer"]["networks"].inject({}) { |networks, network|
+        next unless %w(host key client_name).all? { |key| network.include? key }
+
+        host, key, client_name = network["host"], network["key"], network["client_name"]
+
+        host, port = host.split(":")
+        port       = port ? port.to_i : 8490
+
+        networks["#{host},#{client_name}"] = {host: host, port: port, key: key, client_name: client_name}
+        networks
+      }
 
       Sass::Plugin.options[:style] = :compressed
       use Sass::Plugin::Rack
@@ -103,10 +119,17 @@ module Maru
 
     Task.data_dir = settings.app_config["data_dir"]
 
+    require_relative 'lib/plugin_api'
+
+    require_relative 'helpers/producer'
+
     require_relative 'controllers/index'
     require_relative 'controllers/task'
+    require_relative 'controllers/producer'
 
-    #require_relative 'lib/plugin_api' #TODO
+    settings.app_config["plugins"].each do |plugin|
+      require File.join(settings.app_config["plugin_path"], "#{plugin}.rb")
+    end
   end
 end
 

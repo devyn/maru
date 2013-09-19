@@ -1,13 +1,42 @@
-#new_task.callout_popup
+#new_task.popup_window
+  %h1 Create a new task
+
   %form
-    .field_group
-      %label Name
-      %input{ name: 'name' }
-      .end
+    .setup
+      .field_group
+        %label Name
+        %input.string{ name: 'name' }
 
-    .field_group
-      %label Size (in jobs; optional)
-      %input{ name: 'total_jobs' }
-      .end
+      - unless settings.producer_tasks.empty?
+        .field_group
+          %label Action
+          %select{ name: 'producer' }
+            %option{ value: '', selected: true } Create an empty task
+            - settings.producer_tasks.each do |slug, task|
+              %option{ value: slug }&= task.name
 
-    %input{ type: 'submit', value: 'Create task' }
+      .if_empty
+        .field_group
+          %label Size (in jobs; optional)
+          %input.number{ name: 'total_jobs' }
+
+        %a.button#create_button Create task
+
+      .if_not_empty
+        .field_group
+          %label Network
+          %select{ name: 'network' }
+            %option{ value: '', selected: true } -
+            - settings.networks.each do |slug, network|
+              %option{ value: slug }& #{network[:host]} (as #{network[:client_name]})
+
+        .checkbox_group
+          %label Use the number of jobs generated as the size of the task
+          %input{ type: 'checkbox', name: 'increase_total' }
+
+        %a.button#configure_button Configure task
+
+    .configure
+      .producer_form
+
+      %a.button#create_button Create and submit task
