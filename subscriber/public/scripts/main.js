@@ -5,6 +5,8 @@ var tasks = {};
 var selected_task_id = null
   , created_task_id  = null;
 
+var popup_window_transition_duration = 200; // msecs
+
 function insert_tag_class_text(tag_name, class_name, text, destination) {
   var el = document.createElement(tag_name);
   el.className = class_name;
@@ -165,6 +167,12 @@ function select_task(task) {
   show_details();
 }
 
+function task_secret_info(task_id) {
+  if (localStorage["task_secret_info:" + task_id]) {
+    return JSON.parse(localStorage["task_secret_info:" + task_id]);
+  }
+}
+
 function show_details() {
   $("#details").empty();
 
@@ -173,8 +181,14 @@ function show_details() {
 
     insert_tag_class_text("h1", "", task.name, $("#details"));
 
-    if (localStorage["task_secret_info:" + selected_task_id]) {
-      var info = JSON.parse(localStorage["task_secret_info:" + selected_task_id]);
+    var action_menu = insert_tag_class_text("ul", "action_menu", null, $("#details"));
+
+    var info;
+    if (info = task_secret_info(selected_task_id)) {
+      var menu_item = insert_tag_class_text("li", "", null, action_menu)
+        , link      = insert_tag_class_text("a", "", "Produce jobs for this task", menu_item);
+
+      $(link).click(task_produce_link);
 
       insert_tag_class_text("code", "submit_to", info.submit_to, $("#details"));
     }
@@ -330,6 +344,7 @@ function tasks_changetotal(e) {
 
 function init_new_task() {
   $("#new_task_link").click(function (e) {
+    $(".popup_window").hide();
     $("#click_catcher, #new_task").css({display: 'block'});
 
     /* reset to default state */
@@ -349,7 +364,7 @@ function init_new_task() {
     e.stopPropagation();
   });
 
-  $("#new_task #create_button").click(function (e) {
+  $("#new_task .create_button").click(function (e) {
     $.post('/tasks', $("#new_task form").serialize(), function (response) {
       localStorage["task_secret_info:" + response.id] = JSON.stringify(response);
 
@@ -362,7 +377,7 @@ function init_new_task() {
       $("#click_catcher, #new_task").removeClass("show");
       setTimeout(function () {
         $("#click_catcher, #new_task").css({display: ''})
-      }, 200);
+      }, popup_window_transition_duration);
     });
   });
 
@@ -378,7 +393,7 @@ function init_new_task() {
     }
   });
 
-  $("#new_task #configure_button").click(function (e) {
+  $("#new_task .configure_button").click(function (e) {
     $.get("/producer/" +
       $("#new_task select[name='producer']").val() + "/form",
 
@@ -387,6 +402,65 @@ function init_new_task() {
         $("#new_task .configure .producer_form").html(form);
         $("#new_task .configure").show();
         $("#new_task .setup").hide();
+      });
+  });
+}
+
+function task_produce_link(e) {
+  $(".popup_window").hide();
+  $("#click_catcher, #task_produce").css({display: 'block'});
+
+  /* reset to default state */
+  $("#task_produce .setup, #task_produce .setup .if_empty").show();
+  $("#task_produce .setup .if_not_empty, #task_produce .configure").hide();
+  $("#task_produce .configure .producer_form").empty();
+  $("#task_produce select option").prop("selected", false);
+  $("#task_produce select option:first").prop("selected", true);
+  $("#task_produce input").val("");
+  $("#task_produce input:checked").prop("checked", false);
+  $("#task_produce input[name='name']").focus();
+
+  setTimeout(function () {
+    $("#click_catcher, #task_produce").addClass("show");
+  }, 0);
+
+  e.stopPropagation();
+}
+
+function init_task_produce() {
+  $("#task_produce_link").click(task_produce_link);
+
+  $("#task_produce .produce_button").click(function (e) {
+    $.post('/task/' + task_secret_info(selected_task_id).secret + '/produce',
+      $("#task_produce form").serialize(),
+
+      function (response) {
+        $("#click_catcher, #task_produce").removeClass("show");
+        setTimeout(function () {
+          $("#click_catcher, #task_produce").css({display: ''})
+        }, popup_window_transition_duration);
+      });
+  });
+
+  $("#task_produce select[name='producer']").change(function (e) {
+    if ($(this).val() === '') {
+
+      $("#task_produce .configure_button").prop('disabled', true);
+    } else {
+
+      $("#task_produce .configure_button").prop('disabled', false);
+    }
+  });
+
+  $("#task_produce .configure_button").click(function (e) {
+    $.get("/producer/" +
+      $("#task_produce select[name='producer']").val() + "/form",
+
+      function (form) {
+
+        $("#task_produce .configure .producer_form").html(form);
+        $("#task_produce .configure").show();
+        $("#task_produce .setup").hide();
       });
   });
 }
@@ -405,11 +479,12 @@ $(function() {
     $("#click_catcher, .popup_window").removeClass("show");
     setTimeout(function () {
       $("#click_catcher, .popup_window").css({display: ''});
-    }, 200);
+    }, popup_window_transition_duration);
   });
   $(".popup_window").click(function (e) {
     e.stopPropagation();
   });
 
   init_new_task();
+  init_task_produce();
 });

@@ -16,9 +16,12 @@
       %ul#nav_right
         %li
           %a#new_task_link new
-          = haml :'tasks/new'
 
     %ul#tasks
     #details
 
     #click_catcher
+
+    -# windows and wizards
+    = haml :'tasks/new'
+    = haml :'task/produce'

@@ -19,17 +19,20 @@ module Maru
 
       producer_task.generate(queue, producer_params)
 
-      queue.execute(network_details) { |total_created, total_cancelled, errors|
-        if params[:increase_total]
-          task.total_jobs ||= 0
-          task.total_jobs += total_created - total_cancelled
-          task.save
+      stream :keep_open do |out|
+        queue.execute(network_details) { |total_created, total_cancelled, errors|
+          if params[:increase_total]
+            task.total_jobs ||= 0
+            task.total_jobs += total_created - total_cancelled
+            task.save
 
-          notify_task_changed_total(task)
-        end
+            notify_task_changed_total(task)
+          end
 
-        block.(errors) if block
-      }
+          out << block.(errors) if block
+          out.close
+        }
+      end
     end
   end
 end

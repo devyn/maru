@@ -20,7 +20,7 @@
           %label Size (in jobs; optional)
           %input.number{ name: 'total_jobs' }
 
-        %a.button#create_button Create task
+        %a.button.create_button Create task
 
       .if_not_empty
         .field_group
@@ -34,9 +34,9 @@
           %label Use the number of jobs generated as the size of the task
           %input{ type: 'checkbox', name: 'increase_total' }
 
-        %a.button#configure_button Configure task
+        %a.button.configure_button Configure task
 
     .configure
       .producer_form
 
-      %a.button#create_button Create and submit task
+      %a.button.create_button Create and submit task

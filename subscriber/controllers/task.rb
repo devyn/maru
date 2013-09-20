@@ -84,18 +84,32 @@ module Maru
         if !params[:producer].nil? and !params[:producer].strip.empty? and
            (@producer_task = settings.producer_tasks[params[:producer]])
 
-          # Don't return until we're finished production.
-          stream :keep_open do |out|
-            run_producer_on(@producer_task, @task) {
-              out << result.to_json
-              out.close
-            }
-          end
+          run_producer_on(@producer_task, @task) {
+            result.to_json
+          }
         else
           result.to_json
         end
       else
         [400, {errors: @task.errors.to_json}]
+      end
+    end
+
+    post %r{/task/([A-Za-z0-9]{32})/produce} do |secret|
+      content_type "application/json"
+
+      if @task = Task.find(secret: secret)
+        if !params[:producer].nil? and !params[:producer].strip.empty? and
+           (@producer_task = settings.producer_tasks[params[:producer]])
+
+          run_producer_on(@producer_task, @task) {
+            {success: true}.to_json
+          }
+        else
+          400
+        end
+      else
+        404
       end
     end
 
