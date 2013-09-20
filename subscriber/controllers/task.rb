@@ -130,8 +130,8 @@ module Maru
         }
       end
 
-      def force_tasks_reload
-        task_event "reload", dump_all_tasks
+      def notify_task_changed_total(task)
+        task_event "changetotal", task_id: task.id, total_jobs: task.total_jobs
       end
     end
 

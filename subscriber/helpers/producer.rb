@@ -24,11 +24,11 @@ module Maru
           task.total_jobs ||= 0
           task.total_jobs += total_created - total_cancelled
           task.save
+
+          notify_task_changed_total(task)
         end
 
         block.(errors) if block
-
-        force_tasks_reload
       }
     end
   end

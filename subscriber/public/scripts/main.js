@@ -106,10 +106,44 @@ function update_task_speed(task) {
     , farthest_job = task.recent_jobs[task.recent_jobs.length - 1];
 
   if (nearest_job && farthest_job) {
-    var farthest_time = Date.parse(farthest_job.submitted_at)
-      , speed = 1000 / ((Date.now() - farthest_time) / task.recent_jobs.length) * 60 * 60;
+    var nearest_time     = Date.parse(nearest_job.submitted_at)
+      , farthest_time    = Date.parse(farthest_job.submitted_at);
 
-    $(".task_speed", task.element).text(speed.toFixed(2) + " jobs/h");
+    if (nearest_time === farthest_time) {
+
+      $(".task_speed", task.element).empty();
+    } else {
+
+      var average_duration = (nearest_time - farthest_time) / task.recent_jobs.length
+        , speed            = (1000 / average_duration) * 60 * 60;
+
+      if (Date.now() > nearest_time + average_duration * 2) {
+        // If double the average duration of a job has passed,
+        // the job should be considered inactive.
+        $(".task_speed", task.element).empty();
+      } else {
+        $(".task_speed", task.element).text(speed.toFixed(2) + " jobs/h");
+      }
+    }
+  } else {
+    $(".task_speed", task.element).empty();
+  }
+}
+
+function update_progress(task) {
+  if (task.total_jobs !== null) {
+    var percent = task.submitted_jobs / task.total_jobs * 100;
+
+    setTimeout(function () {
+      $('.progress_fill', task.element).css('width', percent.toString() + "%");
+    }, 10);
+
+    $('.progress_text', task.element).text( 
+        "" + task.submitted_jobs + "/" + task.total_jobs +
+          " completed (" + percent.toFixed(2) + "%)");
+  } else {
+    $('.progress_text', task.element).text(
+        "" + task.submitted_jobs + " completed");
   }
 }
 
@@ -277,24 +311,21 @@ function tasks_jobsubmitted(e) {
 
   $(task.element).addClass("flash");
 
-  if (task.total_jobs !== null) {
-    var percent = task.submitted_jobs / task.total_jobs * 100;
-
-    setTimeout(function () {
-      $('.progress_fill', task.element).css('width', percent.toString() + "%");
-    }, 10);
-
-    $('.progress_text', task.element).text( 
-        "" + task.submitted_jobs + "/" + task.total_jobs +
-          " completed (" + percent.toFixed(2) + "%)");
-  } else {
-    $('.progress_text', task.element).text(
-        "" + task.submitted_jobs + " completed");
-  }
+  update_progress(task);
 
   setTimeout(function () {
     $(task.element).removeClass("flash");
   }, 0);
+}
+
+function tasks_changetotal(e) {
+  var data = JSON.parse(e.data);
+
+  var task = tasks[data.task_id];
+
+  task.total_jobs = data.total_jobs;
+
+  update_progress(task);
 }
 
 function init_new_task() {
@@ -367,6 +398,7 @@ $(function() {
   event_source.addEventListener("reload",       tasks_reload);
   event_source.addEventListener("taskcreated",  tasks_taskcreated);
   event_source.addEventListener("jobsubmitted", tasks_jobsubmitted);
+  event_source.addEventListener("changetotal",  tasks_changetotal);
 
   // register actions
   $("#click_catcher").click(function() {
