@@ -56,7 +56,7 @@ nav
     padding: 0
     margin: 0
 
-@mixin vendor-prefix($property, $value)
+@mixin vendor-prefix($property, $value...)
   #{$property}: $value
   -webkit-#{$property}: $value
   -moz-#{$property}: $value
@@ -76,7 +76,7 @@ nav
 
   background-color: rgba(0, 0, 0, 0.5)
   opacity: 0
-  transition: opacity ease-out 0.2s
+  @include vendor-prefix(transition, opacity ease-out 0.2s)
 
   display: none
 
@@ -105,7 +105,7 @@ nav
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.5)
 
   opacity: 0
-  transition: opacity ease-out 0.2s
+  @include vendor-prefix(transition, opacity ease-out 0.2s)
 
   display: none
 
@@ -221,7 +221,7 @@ input[type='submit']
 
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.3)
 
-    transition: background-color ease 0.5s, box-shadow ease 0.2s
+    @include vendor-prefix(transition, background-color ease 0.5s, box-shadow ease 0.2s)
 
     &:hover
       box-shadow: 0 0 20px rgba(0, 0, 0, 0.7)
@@ -257,7 +257,7 @@ input[type='submit']
   height: 100%
   padding: 0
   margin: 0
-  transition: width ease 0.5s
+  @include vendor-prefix(transition, width ease 0.5s)
 
 .progress_text
   text-align: center
