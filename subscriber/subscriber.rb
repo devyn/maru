@@ -87,7 +87,14 @@ module Maru
       }.parse!(ARGV.dup)
     end
 
-    configure do
+    helpers do
+      include Rack::Utils
+    end
+
+    Sass::Plugin.options[:style] = :compressed
+    use Sass::Plugin::Rack
+
+    def self.initialize_from_config
       set :bind,              settings.app_config["host"]
       set :port,              settings.app_config["port"]
       set :environment,       settings.app_config["environment"].to_sym
@@ -106,30 +113,28 @@ module Maru
         networks
       }
 
-      Sass::Plugin.options[:style] = :compressed
-      use Sass::Plugin::Rack
+      require_relative 'models/task'
+      require_relative 'models/job'
+      require_relative 'models/user'
+      require_relative 'models/task_user_relationship'
+      require_relative 'models/client'
+
+      require_relative 'lib/plugin_api'
+
+      require_relative 'helpers/producer'
+
+      require_relative 'controllers/index'
+      require_relative 'controllers/task'
+      require_relative 'controllers/producer'
+
+      settings.app_config["plugins"].each do |plugin|
+        require File.join(settings.app_config["plugin_path"], "#{plugin}.rb")
+      end
+
+      Task.data_dir = settings.app_config["data_dir"]
     end
 
-    helpers do
-      include Rack::Utils
-    end
-
-    require_relative 'models/task'
-    require_relative 'models/job'
-
-    Task.data_dir = settings.app_config["data_dir"]
-
-    require_relative 'lib/plugin_api'
-
-    require_relative 'helpers/producer'
-
-    require_relative 'controllers/index'
-    require_relative 'controllers/task'
-    require_relative 'controllers/producer'
-
-    settings.app_config["plugins"].each do |plugin|
-      require File.join(settings.app_config["plugin_path"], "#{plugin}.rb")
-    end
+    initialize_from_config if __FILE__ == $0
   end
 end
 
