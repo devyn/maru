@@ -2,7 +2,7 @@
 
 # -*- encoding: utf-8 -*-
 
-$:.unshift(File.join(File.dirname(__FILE__), "lib"))
+$:.unshift(File.join(File.dirname(__FILE__), "../lib"))
 
 require 'optparse'
 require 'uri'
@@ -22,7 +22,7 @@ module Maru
     DEFAULT_CONFIG = {
       "name"        => "MyWorker",
       "temp_dir"    => "/tmp/maru-worker/MyWorker",
-      "plugin_path" => File.expand_path(File.join(File.dirname(__FILE__), "worker/plugins")),
+      "plugin_path" => File.expand_path(File.join(File.dirname(__FILE__), "plugins")),
       "plugins"     => [],
       "networks"    => [],
       "color"       => nil
