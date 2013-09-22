@@ -288,100 +288,129 @@ function tasks_changetotal(e) {
   update_progress(task);
 }
 
-function init_new_task() {
-  $("#new_task .create_button").click(function (e) {
-    $.post('/tasks', $("#new_task form").serialize(), function (response) {
-      localStorage["task_secret_info:" + response.id] = JSON.stringify(response);
+var popup_windows = {
+  new_task: {
+    template_name: "new_task",
+    initialize: function () {
+      $("#new_task .create_button").click(function (e) {
+        $.post('/tasks', $("#new_task form").serialize(), function (response) {
+          localStorage["task_secret_info:" + response.id] = JSON.stringify(response);
 
-      if (tasks.hasOwnProperty(response.id)) {
-        select_task(tasks[response.id]);
-      } else {
-        created_task_id = response.id;
-      }
+          if (tasks.hasOwnProperty(response.id)) {
+            select_task(tasks[response.id]);
+          } else {
+            created_task_id = response.id;
+          }
 
-      $("#click_catcher, #new_task").removeClass("show");
-      setTimeout(function () {
-        $("#click_catcher").css({display: ''})
-        $("#new_task").remove();
-      }, popup_window_transition_duration);
-    });
-  });
-
-  $("#new_task select[name='producer']").change(function (e) {
-    if ($(this).val() === '') {
-
-      $("#new_task .setup .if_empty")    .show();
-      $("#new_task .setup .if_not_empty").hide();
-    } else {
-
-      $("#new_task .setup .if_empty")    .hide();
-      $("#new_task .setup .if_not_empty").show();
-    }
-  });
-
-  $("#new_task .configure_button").click(function (e) {
-    $.get("/producer/" +
-      $("#new_task select[name='producer']").val() + "/form",
-
-      function (form) {
-
-        $("#new_task .configure .producer_form").html(form);
-        $("#new_task .configure").show();
-        $("#new_task .setup").hide();
+          $("#click_catcher, #new_task").removeClass("show");
+          setTimeout(function () {
+            $("#click_catcher").css({display: ''})
+            $("#new_task").remove();
+          }, popup_window_transition_duration);
+        });
       });
-  });
+
+      $("#new_task select[name='producer']").change(function (e) {
+        if ($(this).val() === '') {
+
+          $("#new_task .setup .if_empty")    .show();
+          $("#new_task .setup .if_not_empty").hide();
+        } else {
+
+          $("#new_task .setup .if_empty")    .hide();
+          $("#new_task .setup .if_not_empty").show();
+        }
+      });
+
+      $("#new_task .configure_button").click(function (e) {
+        $.get("/producer/" +
+          $("#new_task select[name='producer']").val() + "/form",
+
+          function (form) {
+
+            $("#new_task .configure .producer_form").html(form);
+            $("#new_task .configure").show();
+            $("#new_task .setup").hide();
+          });
+      });
+    }
+  },
+
+  task_produce: {
+    template_name: "task_produce",
+    initialize: function () {
+      $("#task_produce .produce_button").click(function (e) {
+        $.post('/task/' + task_secret_info(selected_task_id).secret + '/produce',
+          $("#task_produce form").serialize(),
+
+          function (response) {
+            $("#click_catcher, #task_produce").removeClass("show");
+            setTimeout(function () {
+              $("#click_catcher").css({display: ''})
+              $("#task_produce").remove();
+            }, popup_window_transition_duration);
+          });
+      });
+
+      $("#task_produce select[name='producer']").change(function (e) {
+        if ($(this).val() === '') {
+
+          $("#task_produce .configure_button").prop('disabled', true);
+        } else {
+
+          $("#task_produce .configure_button").prop('disabled', false);
+        }
+      });
+
+      $("#task_produce .configure_button").click(function (e) {
+        $.get("/producer/" +
+          $("#task_produce select[name='producer']").val() + "/form",
+
+          function (form) {
+
+            $("#task_produce .configure .producer_form").html(form);
+            $("#task_produce .configure").show();
+            $("#task_produce .setup").hide();
+          });
+      });
+    }
+  }
+};
+
+function open_popup_window(name, argument) {
+  var popup_window = popup_windows[name];
+
+  if (typeof popup_window === 'object') {
+    $(".popup_window").remove(); // remove existing popup window
+
+    if (typeof popup_window.get_template_argument == 'function') {
+      argument = popup_window.get_template_argument(argument);
+    }
+
+    $("body").append(template(popup_window.template_name, argument));
+
+    popup_window.initialize(argument);
+
+    $("#click_catcher, .popup_window").show();
+
+    setTimeout(function () {
+      $("#click_catcher, .popup_window").addClass("show");
+    }, 0);
+  }
+}
+
+function close_popup_window() {
+  $("#click_catcher, .popup_window").removeClass("show");
+
+  setTimeout(function () {
+    $("#click_catcher").hide();
+    $(".popup_window").remove();
+  }, popup_window_transition_duration);
 }
 
 function task_produce_link(e) {
-  $(".popup_window").remove();
-
-  $("body").append(template("task_produce"));
-  init_task_produce();
-
-  $("#click_catcher, #task_produce").css({display: 'block'});
-
-  setTimeout(function () {
-    $("#click_catcher, #task_produce").addClass("show");
-  }, 0);
-
+  open_popup_window("task_produce");
   e.stopPropagation();
-}
-
-function init_task_produce() {
-  $("#task_produce .produce_button").click(function (e) {
-    $.post('/task/' + task_secret_info(selected_task_id).secret + '/produce',
-      $("#task_produce form").serialize(),
-
-      function (response) {
-        $("#click_catcher, #task_produce").removeClass("show");
-        setTimeout(function () {
-          $("#click_catcher").css({display: ''})
-          $("#task_produce").remove();
-        }, popup_window_transition_duration);
-      });
-  });
-
-  $("#task_produce select[name='producer']").change(function (e) {
-    if ($(this).val() === '') {
-
-      $("#task_produce .configure_button").prop('disabled', true);
-    } else {
-
-      $("#task_produce .configure_button").prop('disabled', false);
-    }
-  });
-
-  $("#task_produce .configure_button").click(function (e) {
-    $.get("/producer/" +
-      $("#task_produce select[name='producer']").val() + "/form",
-
-      function (form) {
-
-        $("#task_produce .configure .producer_form").html(form);
-        $("#task_produce .configure").show();
-        $("#task_produce .setup").hide();
-      });
-  });
 }
 
 $(function() {
@@ -400,28 +429,14 @@ $(function() {
 
   // register actions
   $("#click_catcher").click(function() {
-    $("#click_catcher, .popup_window").removeClass("show");
-    setTimeout(function () {
-      $("#click_catcher").css({display: ''});
-      $(".popup_window").remove();
-    }, popup_window_transition_duration);
+    close_popup_window();
   });
   $(".popup_window").click(function (e) {
     e.stopPropagation();
   });
 
   $("#new_task_link").click(function (e) {
-    $(".popup_window").remove();
-
-    $("body").append(template("new_task"));
-    init_new_task();
-
-    $("#click_catcher, #new_task").css({display: 'block'});
-
-    setTimeout(function () {
-      $("#click_catcher, #new_task").addClass("show");
-    }, 0);
-
+    open_popup_window("new_task");
     e.stopPropagation();
   });
 
