@@ -148,7 +148,7 @@ module Maru
       require_relative 'helpers/producer'
 
       require_relative 'controllers/index'
-      require_relative 'controllers/user'
+      require_relative 'controllers/session'
       require_relative 'controllers/task'
       require_relative 'controllers/producer'
 
