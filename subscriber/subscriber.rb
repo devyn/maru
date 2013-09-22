@@ -44,11 +44,33 @@ module Maru
 
       OptionParser.new { |op|
         op.on('-c', '--config FILE', "Load YAML configuration from FILE") { |file|
-          config.update(YAML.load_file(file))
+          y = YAML.load_file(file)
+
+          if !y["secret"]
+            # Generate a random secret for now, and warn the user.
+            # The random secret is 48 bytes of random Base64.
+            y["secret"] = [48.times.map{rand(64)}.pack("C*")].pack("m").gsub("\n", "")
+
+            $stderr.puts "@" * 40
+            $stderr.puts "Warning: You have not set a 'secret' in the configuration file."
+            $stderr.puts "This is necessary for the application to be secure."
+            $stderr.puts "Please add the following to `#{file}':"
+            $stderr.puts
+            $stderr.puts "secret: #{y["secret"].to_json}"
+            $stderr.puts
+            $stderr.puts "@" * 40
+          end
+
+          config.update(y)
         }
         op.on('--write-config FILE', "Write YAML configuration from options to FILE and exit") { |file|
           File.open file, 'w' do |f|
-            YAML.dump config, f
+            c = config.dup
+
+            # Add a random secret to the output
+            c["secret"] = [48.times.map{rand(64)}.pack("C*")].pack("m").gsub("\n", "")
+
+            YAML.dump c, f
           end
           exit
         }
@@ -113,6 +135,8 @@ module Maru
         networks
       }
 
+      use Rack::Session::Cookie, :secret => settings.app_config["secret"]
+
       require_relative 'models/task'
       require_relative 'models/job'
       require_relative 'models/user'
@@ -124,6 +148,7 @@ module Maru
       require_relative 'helpers/producer'
 
       require_relative 'controllers/index'
+      require_relative 'controllers/user'
       require_relative 'controllers/task'
       require_relative 'controllers/producer'
 
