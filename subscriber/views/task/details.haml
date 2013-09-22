@@ -1,0 +1,15 @@
+-# Handlebars template for the details pane
+%template.handlebars#task_details_template
+  %h1 {{name}}
+
+  %ul.action_menu
+    {{#if secret_info}}
+    %li
+      %a.task_produce_link Produce jobs for this task
+    {{/if}}
+
+  {{#if secret_info}}
+  %code.submit_to {{secret_info/submit_to}}
+  {{/if}}
+
+  %ul#jobs

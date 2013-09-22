@@ -1,33 +1,33 @@
+%template#task_produce_template
+  #task_produce.popup_window
+    %h1 Produce jobs for a task
 
-#task_produce.popup_window
-  %h1 Produce jobs for a task
+    %form
+      - if settings.producer_tasks.empty?
+        %p Sorry, this feature is not enabled.
+      - else
+        .setup
+          .field_group
+            %label Action
+            %select{ name: 'producer' }
+              %option{ value: '', selected: true } --
+              - settings.producer_tasks.each do |slug, task|
+                %option{ value: slug }&= task.name
 
-  %form
-    - if settings.producer_tasks.empty?
-      %p Sorry, this feature is not enabled.
-    - else
-      .setup
-        .field_group
-          %label Action
-          %select{ name: 'producer' }
-            %option{ value: '', selected: true } --
-            - settings.producer_tasks.each do |slug, task|
-              %option{ value: slug }&= task.name
+          .field_group
+            %label Network
+            %select{ name: 'network' }
+              %option{ value: '', selected: true } -
+              - settings.networks.each do |slug, network|
+                %option{ value: slug }& #{network[:host]} (as #{network[:client_name]})
 
-        .field_group
-          %label Network
-          %select{ name: 'network' }
-            %option{ value: '', selected: true } -
-            - settings.networks.each do |slug, network|
-              %option{ value: slug }& #{network[:host]} (as #{network[:client_name]})
+          .checkbox_group
+            %label Add the number of jobs generated to the size of the task
+            %input{ type: 'checkbox', name: 'increase_total', checked: true }
 
-        .checkbox_group
-          %label Add the number of jobs generated to the size of the task
-          %input{ type: 'checkbox', name: 'increase_total' }
+          %a.button.configure_button Configure action
 
-        %a.button.configure_button Configure action
+        .configure
+          .producer_form
 
-      .configure
-        .producer_form
-
-        %a.button.produce_button Produce jobs and submit
+          %a.button.produce_button Produce jobs and submit

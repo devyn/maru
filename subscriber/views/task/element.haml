@@ -1,0 +1,10 @@
+-# Handlebars template for the task element
+%template.handlebars#task_element_template
+  %li
+    .task_name {{name}}
+    .task_speed
+    .clear_both
+
+    .progress_bar
+      .progress_fill{ style: "width: 0;" }
+      .progress_text 0 completed

@@ -7,19 +7,16 @@ var selected_task_id = null
 
 var popup_window_transition_duration = 200; // msecs
 
-function insert_tag_class_text(tag_name, class_name, text, destination) {
-  var el = document.createElement(tag_name);
-  el.className = class_name;
+function template(name, argument) {
+  var template_element = $("template#" + name + "_template");
 
-  if (text) el.appendChild(document.createTextNode(text));
-
-  $(destination).append(el);
-  return el;
+  if (template_element.hasClass('handlebars')) {
+    return $.parseHTML(template.handlebars[name + "_template"](argument));
+  } else {
+    return template_element[0].content.cloneNode(true);
+  }
 }
-
-function insert_div_class_text(class_name, text, destination) {
-  return insert_tag_class_text("div", class_name, text, destination);
-}
+template.handlebars = {}; // handlebars compiled template cache
 
 function ease_in(el) {
   $(el).css({
@@ -68,39 +65,19 @@ function ease_out(el, callback) {
 }
 
 function create_task_element(task) {
-  task.element = document.createElement("li");
+  task.element = template("task_element", task)[1];
 
-  insert_div_class_text("task_name", task.name, task.element);
-  insert_div_class_text("task_speed", "", task.element);
-  insert_div_class_text("clear_both", null, task.element);
-
+  update_progress(task);
   update_task_speed(task);
-
-  var progress_bar  = insert_div_class_text("progress_bar", null, task.element);
-  var progress_fill = insert_div_class_text("progress_fill", null, progress_bar);
-
-  if (task.total_jobs !== null) {
-    var percent = task.submitted_jobs / task.total_jobs * 100;
-
-    progress_fill.style.width = percent.toString() + "%";
-
-    insert_div_class_text("progress_text",
-        "" + task.submitted_jobs + "/" + task.total_jobs +
-          " completed (" + percent.toFixed(2) + "%)",
-        progress_bar);
-  } else {
-    progress_fill.style.width = 0;
-
-    insert_div_class_text("progress_text",
-        "" + task.submitted_jobs + " completed",
-        progress_bar);
-  }
 
   $(task.element).click(function () {
     select_task(task);
   });
 
-  $("#tasks").prepend(task.element);
+  // next tick to avoid the transition
+  setTimeout(function () {
+    $("#tasks").prepend(task.element);
+  }, 0);
 }
 
 function update_task_speed(task) {
@@ -179,22 +156,11 @@ function show_details() {
   if (selected_task_id !== null) {
     var task = tasks[selected_task_id];
 
-    insert_tag_class_text("h1", "", task.name, $("#details"));
+    task.secret_info = task_secret_info(selected_task_id);
 
-    var action_menu = insert_tag_class_text("ul", "action_menu", null, $("#details"));
+    $("#details").html(template("task_details", task));
 
-    var info;
-    if (info = task_secret_info(selected_task_id)) {
-      var menu_item = insert_tag_class_text("li", "", null, action_menu)
-        , link      = insert_tag_class_text("a", "", "Produce jobs for this task", menu_item);
-
-      $(link).click(task_produce_link);
-
-      insert_tag_class_text("code", "submit_to", info.submit_to, $("#details"));
-    }
-
-    var jobs = insert_tag_class_text("ul", "", null, $("#details"));
-    jobs.id = "jobs";
+    $("#details .task_produce_link").click(task_produce_link);
 
     for (var i = task.recent_jobs.length - 1; i >= 0; i--) {
       var job = task.recent_jobs[i];
@@ -205,37 +171,17 @@ function show_details() {
 }
 
 function prepend_job_element(job) {
-  var job_el = document.createElement("li");
-
-  var left_group = insert_div_class_text("job_left_group", null, job_el);
-
-  if (job.name === null) {
-    insert_div_class_text("job_name unnamed", "<unnamed>", left_group);
-  } else {
-    insert_div_class_text("job_name", job.name, left_group);
-  }
-
-  insert_div_class_text("job_worker", job.worker, left_group);
-
-  var right_group = insert_div_class_text("job_right_group", null, job_el);
-
   var type = job.type ? job.type.split(".") : [];
 
-  var type_el = insert_div_class_text("job_type", null, right_group);
-
   if (type.length > 1) {
-    insert_tag_class_text("span", "namespace", type.slice(0, type.length - 1).join(".") + ".", type_el);
+    job.type_namespace = type.slice(0, type.length - 1).join(".") + ".";
+    job.type_subname   = type[type.length - 1];
   }
 
-  if (type.length > 0) {
-    type_el.appendChild(document.createTextNode(type[type.length - 1]));
-  }
+  var job_element = template("task_job", job)[1];
 
-  insert_div_class_text("job_submitted_at", job.submitted_at, right_group);
-
-  $("#jobs").prepend(job_el);
-
-  return job_el;
+  $("#jobs").prepend(job_element);
+  return job_element;
 }
 
 function tasks_reload(e) {
@@ -343,27 +289,6 @@ function tasks_changetotal(e) {
 }
 
 function init_new_task() {
-  $("#new_task_link").click(function (e) {
-    $(".popup_window").hide();
-    $("#click_catcher, #new_task").css({display: 'block'});
-
-    /* reset to default state */
-    $("#new_task .setup, #new_task .setup .if_empty").show();
-    $("#new_task .setup .if_not_empty, #new_task .configure").hide();
-    $("#new_task .configure .producer_form").empty();
-    $("#new_task select option").prop("selected", false);
-    $("#new_task select option:first").prop("selected", true);
-    $("#new_task input").val("");
-    $("#new_task input:checked").prop("checked", false);
-    $("#new_task input[name='name']").focus();
-
-    setTimeout(function () {
-      $("#click_catcher, #new_task").addClass("show");
-    }, 0);
-
-    e.stopPropagation();
-  });
-
   $("#new_task .create_button").click(function (e) {
     $.post('/tasks', $("#new_task form").serialize(), function (response) {
       localStorage["task_secret_info:" + response.id] = JSON.stringify(response);
@@ -376,7 +301,8 @@ function init_new_task() {
 
       $("#click_catcher, #new_task").removeClass("show");
       setTimeout(function () {
-        $("#click_catcher, #new_task").css({display: ''})
+        $("#click_catcher").css({display: ''})
+        $("#new_task").remove();
       }, popup_window_transition_duration);
     });
   });
@@ -407,18 +333,12 @@ function init_new_task() {
 }
 
 function task_produce_link(e) {
-  $(".popup_window").hide();
-  $("#click_catcher, #task_produce").css({display: 'block'});
+  $(".popup_window").remove();
 
-  /* reset to default state */
-  $("#task_produce .setup, #task_produce .setup .if_empty").show();
-  $("#task_produce .setup .if_not_empty, #task_produce .configure").hide();
-  $("#task_produce .configure .producer_form").empty();
-  $("#task_produce select option").prop("selected", false);
-  $("#task_produce select option:first").prop("selected", true);
-  $("#task_produce input").val("");
-  $("#task_produce input:checked").prop("checked", false);
-  $("#task_produce input[name='name']").focus();
+  $("body").append(template("task_produce"));
+  init_task_produce();
+
+  $("#click_catcher, #task_produce").css({display: 'block'});
 
   setTimeout(function () {
     $("#click_catcher, #task_produce").addClass("show");
@@ -428,8 +348,6 @@ function task_produce_link(e) {
 }
 
 function init_task_produce() {
-  $("#task_produce_link").click(task_produce_link);
-
   $("#task_produce .produce_button").click(function (e) {
     $.post('/task/' + task_secret_info(selected_task_id).secret + '/produce',
       $("#task_produce form").serialize(),
@@ -437,7 +355,8 @@ function init_task_produce() {
       function (response) {
         $("#click_catcher, #task_produce").removeClass("show");
         setTimeout(function () {
-          $("#click_catcher, #task_produce").css({display: ''})
+          $("#click_catcher").css({display: ''})
+          $("#task_produce").remove();
         }, popup_window_transition_duration);
       });
   });
@@ -466,6 +385,11 @@ function init_task_produce() {
 }
 
 $(function() {
+  // compile templates
+  $("template.handlebars").each(function() {
+    template.handlebars[this.id] = Handlebars.compile($(this).html());
+  });
+
   // establish event source
   event_source = new EventSource("/tasks.event-stream");
 
@@ -478,13 +402,27 @@ $(function() {
   $("#click_catcher").click(function() {
     $("#click_catcher, .popup_window").removeClass("show");
     setTimeout(function () {
-      $("#click_catcher, .popup_window").css({display: ''});
+      $("#click_catcher").css({display: ''});
+      $(".popup_window").remove();
     }, popup_window_transition_duration);
   });
   $(".popup_window").click(function (e) {
     e.stopPropagation();
   });
 
-  init_new_task();
-  init_task_produce();
+  $("#new_task_link").click(function (e) {
+    $(".popup_window").remove();
+
+    $("body").append(template("new_task"));
+    init_new_task();
+
+    $("#click_catcher, #new_task").css({display: 'block'});
+
+    setTimeout(function () {
+      $("#click_catcher, #new_task").addClass("show");
+    }, 0);
+
+    e.stopPropagation();
+  });
+
 });

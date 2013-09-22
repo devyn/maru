@@ -1,42 +1,43 @@
-#new_task.popup_window
-  %h1 Create a new task
+%template#new_task_template
+  #new_task.popup_window
+    %h1 Create a new task
 
-  %form
-    .setup
-      .field_group
-        %label Name
-        %input.string{ name: 'name' }
-
-      - unless settings.producer_tasks.empty?
+    %form
+      .setup
         .field_group
-          %label Action
-          %select{ name: 'producer' }
-            %option{ value: '', selected: true } Create an empty task
-            - settings.producer_tasks.each do |slug, task|
-              %option{ value: slug }&= task.name
+          %label Name*
+          %input.string{ name: 'name' }
 
-      .if_empty
-        .field_group
-          %label Size (in jobs; optional)
-          %input.number{ name: 'total_jobs' }
+        - unless settings.producer_tasks.empty?
+          .field_group
+            %label Action
+            %select{ name: 'producer' }
+              %option{ value: '', selected: true } Create an empty task
+              - settings.producer_tasks.each do |slug, task|
+                %option{ value: slug }&= task.name
 
-        %a.button.create_button Create task
+        .if_empty
+          .field_group
+            %label Size (in jobs)
+            %input.number{ name: 'total_jobs' }
 
-      .if_not_empty
-        .field_group
-          %label Network
-          %select{ name: 'network' }
-            %option{ value: '', selected: true } -
-            - settings.networks.each do |slug, network|
-              %option{ value: slug }& #{network[:host]} (as #{network[:client_name]})
+          %a.button.create_button Create task
 
-        .checkbox_group
-          %label Use the number of jobs generated as the size of the task
-          %input{ type: 'checkbox', name: 'increase_total' }
+        .if_not_empty
+          .field_group
+            %label Network*
+            %select{ name: 'network' }
+              %option{ value: '', selected: true } -
+              - settings.networks.each do |slug, network|
+                %option{ value: slug }& #{network[:host]} (as #{network[:client_name]})
 
-        %a.button.configure_button Configure task
+          .checkbox_group
+            %label Use the number of jobs generated as the size of the task
+            %input{ type: 'checkbox', name: 'increase_total', checked: true }
 
-    .configure
-      .producer_form
+          %a.button.configure_button Configure task
 
-      %a.button.create_button Create and submit task
+      .configure
+        .producer_form
+
+        %a.button.create_button Create and submit task
