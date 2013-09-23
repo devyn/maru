@@ -145,6 +145,7 @@ module Maru
 
       require_relative 'lib/plugin_api'
 
+      require_relative 'helpers/user'
       require_relative 'helpers/producer'
 
       require_relative 'controllers/index'

@@ -10,13 +10,27 @@
     %script{ src: '/scripts/ext/jquery-1.10.2.min.js', type: 'text/javascript' }
     %script{ src: '/scripts/ext/handlebars.js', type: 'text/javascript' }
     %script{ src: '/scripts/main.js', type: 'text/javascript' }
+
+    - if logged_in?
+      :javascript
+        window.user_info = #{{name: @user.name, is_admin: @user.is_admin}.to_json};
   %body
     %nav
       #nav_left
         丸 maru
       %ul#nav_right
-        %li
-          %a#new_task_link new
+      %template#nav_template
+        %li.logged_in>
+          %a#new_task_link new task
+
+        %li.admin>
+          %a#users_link users
+
+        %li.logged_in>
+          %a#session_delete_link log out
+
+        %li.not_logged_in>
+          %a#user_login_link log in
 
     %ul#tasks
     #details
@@ -24,6 +38,7 @@
     #click_catcher
 
     -# client side templates
+    = haml :'user/login'
     = haml :'tasks/new'
     = haml :'task/produce'
     = haml :'task/element'

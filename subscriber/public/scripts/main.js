@@ -64,20 +64,30 @@ function ease_out(el, callback) {
   }, 0);
 }
 
-function create_task_element(task) {
-  task.element = template("task_element", task)[1];
+// Kind of a hack to change an element without invoking its CSS transitions.
+function change_without_transition(element, procedure) {
+  $(element).addClass('notransition');
 
-  update_progress(task);
+  procedure(element);
+
+  setTimeout(function () {
+    $(element).removeClass('notransition');
+  }, 100);
+}
+
+function create_task_element(task) {
+  task.element = template("task_element", task)[0];
+
+  change_without_transition($(".progress_fill", task.element),
+      function () { update_progress(task); });
+
   update_task_speed(task);
 
   $(task.element).click(function () {
     select_task(task);
   });
 
-  // next tick to avoid the transition
-  setTimeout(function () {
-    $("#tasks").prepend(task.element);
-  }, 0);
+  $("#tasks").prepend(task.element);
 }
 
 function update_task_speed(task) {
@@ -178,7 +188,7 @@ function prepend_job_element(job) {
     job.type_subname   = type[type.length - 1];
   }
 
-  var job_element = template("task_job", job)[1];
+  var job_element = template("task_job", job)[0];
 
   $("#jobs").prepend(job_element);
   return job_element;
@@ -288,7 +298,44 @@ function tasks_changetotal(e) {
   update_progress(task);
 }
 
+function post_change_user(user_info) {
+  window.user_info = user_info;
+
+  update_nav(user_info);
+
+  // Reconnect to the task event stream in order to get the tasks
+  // for this user.
+  connect_to_task_event_stream();
+}
+
 var popup_windows = {
+  user_login: {
+    template_name: "user_login",
+    initialize: function () {
+      $("#user_login form").submit(function (e) {
+        e.preventDefault();
+
+        $.ajax({
+          type: "POST",
+          url: "/user/" + encodeURIComponent($("#user_login form input[name='username']").val()) + "/login",
+          data: {
+            password: $("#user_login form input[name='password']").val()
+          },
+          dataType: "json",
+          success: function (data) {
+            post_change_user(data.user);
+            close_popup_window();
+          },
+          error: function (xhr) {
+            if (xhr.statusCode() == 403) {
+              popup_window_error_message("Wrong username or password");
+            }
+          }
+        });
+      });
+    }
+  },
+
   new_task: {
     template_name: "new_task",
     initialize: function () {
@@ -302,11 +349,7 @@ var popup_windows = {
             created_task_id = response.id;
           }
 
-          $("#click_catcher, #new_task").removeClass("show");
-          setTimeout(function () {
-            $("#click_catcher").css({display: ''})
-            $("#new_task").remove();
-          }, popup_window_transition_duration);
+          close_popup_window();
         });
       });
 
@@ -344,11 +387,7 @@ var popup_windows = {
           $("#task_produce form").serialize(),
 
           function (response) {
-            $("#click_catcher, #task_produce").removeClass("show");
-            setTimeout(function () {
-              $("#click_catcher").css({display: ''})
-              $("#task_produce").remove();
-            }, popup_window_transition_duration);
+            close_popup_window();
           });
       });
 
@@ -413,6 +452,58 @@ function task_produce_link(e) {
   e.stopPropagation();
 }
 
+function update_nav(user_info) {
+  $("#nav_right").html(template("nav"));
+
+  if (user_info) {
+    $("#nav_right .not_logged_in").remove();
+
+    if (!user_info.is_admin) {
+      $("#nav_right .admin").remove();
+    }
+  } else {
+    $("#nav_right .logged_in, #nav_right .admin").remove();
+  }
+
+  $("#new_task_link").click(function (e) {
+    open_popup_window("new_task");
+    e.stopPropagation();
+  });
+
+  $("#user_login_link").click(function (e) {
+    open_popup_window("user_login");
+    e.stopPropagation();
+  });
+
+  $("#session_delete_link").click(function (e) {
+    session_delete();
+    e.stopPropagation();
+  });
+}
+
+function session_delete() {
+  $.ajax({
+    type: "DELETE",
+    url: "/session",
+    success: function () {
+      post_change_user(null);
+    }
+  });
+}
+
+function connect_to_task_event_stream() {
+  if (event_source) {
+    event_source.close();
+  }
+
+  event_source = new EventSource("/tasks.event-stream");
+
+  event_source.addEventListener("reload",       tasks_reload);
+  event_source.addEventListener("taskcreated",  tasks_taskcreated);
+  event_source.addEventListener("jobsubmitted", tasks_jobsubmitted);
+  event_source.addEventListener("changetotal",  tasks_changetotal);
+}
+
 $(function() {
   // compile templates
   $("template.handlebars").each(function() {
@@ -420,12 +511,7 @@ $(function() {
   });
 
   // establish event source
-  event_source = new EventSource("/tasks.event-stream");
-
-  event_source.addEventListener("reload",       tasks_reload);
-  event_source.addEventListener("taskcreated",  tasks_taskcreated);
-  event_source.addEventListener("jobsubmitted", tasks_jobsubmitted);
-  event_source.addEventListener("changetotal",  tasks_changetotal);
+  connect_to_task_event_stream();
 
   // register actions
   $("#click_catcher").click(function() {
@@ -435,9 +521,5 @@ $(function() {
     e.stopPropagation();
   });
 
-  $("#new_task_link").click(function (e) {
-    open_popup_window("new_task");
-    e.stopPropagation();
-  });
-
+  update_nav(window.user_info);
 });

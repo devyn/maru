@@ -16,5 +16,11 @@ module Maru
         end
       end
     end
+
+    helpers do
+      def logged_in?
+        @user ? true : false
+      end
+    end
   end
 end

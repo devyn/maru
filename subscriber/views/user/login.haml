@@ -1,0 +1,11 @@
+%template#user_login_template
+  #user_login.popup_window
+    %form
+      .field_group
+        %label Username
+        %input{ name: "username" }/
+      .field_group
+        %label Password
+        %input{ name: "password", type: "password" }/
+
+      %input{ type: "submit", value: "Log in" }/
