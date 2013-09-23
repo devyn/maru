@@ -493,12 +493,16 @@ module Maru
             if @hello
               return result.invalid_argument!("challenge required") unless challenge = args[0]
 
-              # Generate response to challenge.
-              # The way authentication works in maru is that both sides
-              # challenge a shared key to prove the identity of the other
-              # before continuing.
+              if @info
+                # Generate response to challenge.
+                # The way authentication works in maru is that both sides
+                # challenge a shared key to prove the identity of the other
+                # before continuing.
 
-              result.succeed(Maru::Authentication.respond(challenge, @info["key"]))
+                result.succeed(Maru::Authentication.respond(challenge, @info["key"]))
+              else
+                # Do nothing; the connection will fail anyway.
+              end
             else
               # `hello` must be sent first
               result.unrecognized_command!
