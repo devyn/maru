@@ -333,6 +333,10 @@ var popup_windows = {
           }
         });
       });
+
+      setTimeout(function () {
+        $("#user_login form input:first").focus();
+      }, 0);
     }
   },
 
