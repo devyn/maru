@@ -1,11 +1,11 @@
 -# Handlebars template for a job item
 %template.handlebars#task_job_template
-  %li
+  %li>
     .job_left_group
       {{#if name}}
       .job_name {{name}}
       {{else}}
-      .job_name.unnamed <unnamed>
+      .job_name.unnamed&= "<unnamed>"
       {{/if}}
 
       .job_worker {{worker}}
@@ -13,7 +13,7 @@
     .job_right_group
       .job_type
         {{#if type_namespace}}
-        %span.namespace {{type_namespace}}
+        %span.namespace> {{type_namespace}}
         {{type_subname}}
         {{else}}
         {{type}}
