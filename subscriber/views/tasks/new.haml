@@ -8,6 +8,17 @@
           %label Name*
           %input.string{ name: 'name' }
 
+        .field_group
+          %label Visibility
+          %select{ name: 'visibility_level' }
+            %option{ value: 2, selected: true } Only users I explicitly select can see this task
+            %option{ value: 1 }                 Only users who are logged in can see this task
+            %option{ value: 0 }                 Anyone can see this task
+
+        .checkbox_group
+          %label Make the results of this task accessible to anyone who can see it
+          %input{ type: 'checkbox', name: 'results_are_public' }
+
         - unless settings.producer_tasks.empty?
           .field_group
             %label Action

@@ -3,13 +3,13 @@
   %h1 {{name}}
 
   %ul.action_menu
-    {{#if secret_info}}
+    {{#if secret}}
     %li
       %a.task_produce_link Produce jobs for this task
     {{/if}}
 
-  {{#if secret_info}}
-  %code.submit_to {{secret_info/submit_to}}
+  {{#if secret}}
+  %code.submit_to {{submit_to}}
   {{/if}}
 
   %ul#jobs

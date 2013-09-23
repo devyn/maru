@@ -154,19 +154,11 @@ function select_task(task) {
   show_details();
 }
 
-function task_secret_info(task_id) {
-  if (localStorage["task_secret_info:" + task_id]) {
-    return JSON.parse(localStorage["task_secret_info:" + task_id]);
-  }
-}
-
 function show_details() {
   $("#details").empty();
 
   if (selected_task_id !== null) {
     var task = tasks[selected_task_id];
-
-    task.secret_info = task_secret_info(selected_task_id);
 
     $("#details").html(template("task_details", task));
 
@@ -194,6 +186,7 @@ function prepend_job_element(job) {
   return job_element;
 }
 
+// needs DRY with tasks_taskcreated
 function tasks_reload(e) {
   var data = JSON.parse(e.data);
 
@@ -211,6 +204,10 @@ function tasks_reload(e) {
     task.submitted_jobs = data[i].submitted_jobs;
     task.recent_jobs    = data[i].recent_jobs;
 
+    task.relationship_to_user = data[i].relationship_to_user;
+    task.secret               = data[i].secret;
+    task.submit_to            = data[i].submit_to;
+
     create_task_element(task);
 
     if (selected_task_id === task.id) {
@@ -225,6 +222,7 @@ function tasks_reload(e) {
   show_details();
 }
 
+// needs DRY with tasks_reload
 function tasks_taskcreated(e) {
   var data = JSON.parse(e.data);
 
@@ -236,6 +234,10 @@ function tasks_taskcreated(e) {
   task.total_jobs     = data.total_jobs;
   task.submitted_jobs = 0;
   task.recent_jobs    = [];
+
+  task.relationship_to_user = data.relationship_to_user;
+  task.secret               = data.secret;
+  task.submit_to            = data.submit_to;
 
   create_task_element(task);
 
@@ -345,8 +347,6 @@ var popup_windows = {
     initialize: function () {
       $("#new_task .create_button").click(function (e) {
         $.post('/tasks', $("#new_task form").serialize(), function (response) {
-          localStorage["task_secret_info:" + response.id] = JSON.stringify(response);
-
           if (tasks.hasOwnProperty(response.id)) {
             select_task(tasks[response.id]);
           } else {
@@ -387,7 +387,7 @@ var popup_windows = {
     template_name: "task_produce",
     initialize: function () {
       $("#task_produce .produce_button").click(function (e) {
-        $.post('/task/' + task_secret_info(selected_task_id).secret + '/produce',
+        $.post('/task/' + selected_task_id + '/produce',
           $("#task_produce form").serialize(),
 
           function (response) {
