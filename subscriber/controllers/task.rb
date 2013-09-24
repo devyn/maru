@@ -85,7 +85,7 @@ module Maru
       @task = Task.new(
         name:               params[:name],
         secret:             "%032x" % rand(16**32),
-        total_jobs:         (params[:producer] ? nil : params[:total_jobs]),
+        total_jobs:         (params[:producer] && !params[:producer].empty? ? nil : params[:total_jobs]),
         visibility_level:   params[:visibility_level].to_i,
         results_are_public: (params[:results_are_public] ? true : false)
       )
