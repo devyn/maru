@@ -5,13 +5,13 @@ Sequel.migration do
       primary_key :id
       foreign_key :user_name, :users, :null => false, :type => String
 
-      column :remote_host, String, :null => false
-      column :remote_port, Integer
+      column :remote_host, String,  :null => false
+      column :remote_port, Integer, :null => false
 
       column :name, String, :null => false
       column :key,  String, :null => false
 
-      unique [:remote_host, :remote_port, :name, :key]
+      unique [:remote_host, :remote_port, :name]
 
       # Client permissions.
 
