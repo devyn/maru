@@ -37,10 +37,8 @@
         .if_not_empty
           .field_group
             %label Network*
-            %select{ name: 'network' }
+            %select.networks{ name: 'network' }
               %option{ value: '', selected: true } -
-              - settings.networks.each do |slug, network|
-                %option{ value: slug }& #{network[:host]} (as #{network[:client_name]})
 
           .checkbox_group
             %label Use the number of jobs generated as the size of the task

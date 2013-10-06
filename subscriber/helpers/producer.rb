@@ -2,7 +2,16 @@ module Maru
   class Subscriber
     def run_producer_on(producer_task, task, &block)
       if params[:network] and !params[:network].strip.empty?
-        network_details = settings.networks[params[:network]]
+        if client = Client.find(user: @user, is_producer: true, id: params[:network])
+          network_details = {
+            host:        client.remote_host,
+            port:        client.remote_port,
+            client_name: client.name,
+            key:         client.key
+          }
+        else
+          return halt(404, {errors: ["Target network not found."]}.to_json)
+        end
       else
         return halt(400, {errors: ["No target network specified."]}.to_json)
       end

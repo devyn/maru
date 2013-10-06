@@ -310,6 +310,30 @@ function post_change_user(user_info) {
   connect_to_task_event_stream();
 }
 
+var default_network_port = 8490;
+
+function update_clients() {
+  if (window.user_info) {
+    $.ajax({
+        url: '/user/' + window.user_info.name + '/clients',
+        dataType: 'json',
+        success: function (clients) {
+          $("select.networks").html("<option value='' selected>-</option>");
+
+          $.each(clients, function (i, client) {
+            if (client.is_producer) {
+              $("select.networks").append(
+                $("<option />").attr("value", client.id)
+                               .text(client.remote_host +
+                                     (client.remote_port === default_network_port ? "" : ":" + client.remote_port) +
+                                     " (as " + client.name + ")"));
+            }
+          });
+        }
+    });
+  }
+}
+
 var popup_windows = {
   user_login: {
     template_name: "user_login",
@@ -380,6 +404,8 @@ var popup_windows = {
             $("#new_task .setup").hide();
           });
       });
+
+      update_clients();
     }
   },
 
@@ -416,6 +442,8 @@ var popup_windows = {
             $("#task_produce .setup").hide();
           });
       });
+
+      update_clients();
     }
   }
 };

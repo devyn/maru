@@ -24,10 +24,7 @@ module Maru
       "database"    => "sqlite://subscriber.db",
       "data_dir"    => "data",
       "plugin_path" => File.expand_path(File.join(File.dirname(__FILE__), "plugins")),
-      "plugins"     => [],
-      "producer"    => {
-        "networks"  => []
-      }
+      "plugins"     => []
     }
 
     set :app_config, DEFAULT_CONFIG.dup
@@ -116,26 +113,17 @@ module Maru
     Sass::Plugin.options[:style] = :compressed
     use Sass::Plugin::Rack
 
+    Sequel::Model.plugin :json_serializer
+
     def self.initialize_from_config
       set :bind,              settings.app_config["host"]
       set :port,              settings.app_config["port"]
       set :environment,       settings.app_config["environment"].to_sym
       set :db, Sequel.connect(settings.app_config["database"])
 
-      # ugh, so ugly
-      set :networks, settings.app_config["producer"]["networks"].inject({}) { |networks, network|
-        next unless %w(host key client_name).all? { |key| network.include? key }
-
-        host, key, client_name = network["host"], network["key"], network["client_name"]
-
-        host, port = host.split(":")
-        port       = port ? port.to_i : 8490
-
-        networks["#{host},#{client_name}"] = {host: host, port: port, key: key, client_name: client_name}
-        networks
-      }
-
-      use Rack::Session::Cookie, :secret => settings.app_config["secret"]
+      use Rack::Session::Cookie,
+        :secret       => settings.app_config["secret"],
+        :expire_after => 2592000 # 30 days
 
       require_relative 'models/task'
       require_relative 'models/job'
@@ -150,6 +138,7 @@ module Maru
 
       require_relative 'controllers/index'
       require_relative 'controllers/session'
+      require_relative 'controllers/client'
       require_relative 'controllers/task'
       require_relative 'controllers/producer'
 
