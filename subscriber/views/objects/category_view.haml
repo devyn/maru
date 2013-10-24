@@ -1,0 +1,11 @@
+%template.handlebars#objects_category_view_template
+  %div{ class: 'objects_category_view {{object_type}}s_viewer' }>
+
+    %ul.categories
+
+    .category_buttons
+      {{#if show_add}}
+      %a.button.new_category +
+      {{/if}}
+
+    %div{ class: 'object_view_pane {{object_type}}_view_pane' }

@@ -125,17 +125,22 @@ nav
     display: block
     opacity: 1
 
-  h1
+  > h1
     margin-top: 0
     margin-bottom: 1em
     font-size: 1.5em
-    text-align: center
+    text-align: left
 
-  form
-    margin: 50px 0 0 50px
-    padding-right: 50px
-    height: 380px
+  > .objects_category_view, > form
+    position: absolute
+    top: 5em
+    left: 30px
+    right: 30px
+    bottom: 30px
+
+  > form
     overflow: auto
+    padding: 0 50px
 
 .checkbox_group, .field_group
   margin-bottom: 30px
@@ -215,6 +220,130 @@ input[type='submit']
     width: 350px
     height: 220px
     margin: auto
+
+.objects_category_view
+  background-color: #ffffff
+  color:            #333333
+  border:           1px solid #999999
+
+  position: relative
+
+  $sidebar-width: 200px
+  $buttons-height: 30px
+
+  .categories
+    list-style-type: none
+    background-color: #cccccc
+    padding: 15px 0
+    margin: 0
+    border-right: 1px solid #999999
+
+    position: absolute
+    left: 0
+    top: 0
+    bottom: $buttons-height
+    width: $sidebar-width
+    height: auto
+    overflow: auto
+
+    li
+      padding: 5px
+      cursor: pointer
+      word-wrap: break-word
+      clear: both
+
+      @include vendor-prefix(transition, background-color linear 0.1s, color linear 0.1s)
+
+      &:hover
+        background-color: #dddddd
+
+      &.selected
+        background-color: #748
+        color: #dddddd
+        &:hover
+          background-color: #859
+
+      &::after
+        display: block
+        float: right
+        content: '\203a'
+        padding: 0 5px
+        margin-left: 5px
+
+      input
+        border: 1px solid #999999
+        padding: 2px
+        width: 150px
+
+  .category_buttons
+    background-color: #cccccc
+    padding: 0
+    margin: 0
+    border-right: 1px solid #999999
+
+    position: absolute
+    left: 0
+    bottom: 0
+    height: $buttons-height
+    width: $sidebar-width
+
+    > .button
+      padding-top:    $buttons-height*1/5
+      padding-bottom: $buttons-height*1/5
+
+      height: $buttons-height*3/5
+      border: none
+
+  .object_view_pane
+    padding: 20px
+
+    position: absolute
+    left: $sidebar-width + 1
+    right: 0
+    top: 0
+    bottom: 0
+    width: auto
+    height: auto
+    overflow: auto
+
+.clients_viewer
+  ul.clients
+    list-style-type: none
+    padding-left: 0
+    margin: 0
+
+    li
+      margin-bottom: 10px
+      padding: 5px
+      @include vendor-prefix(transition, background-color linear 0.1s)
+
+      .delete_button
+        opacity: 0.0
+        @include vendor-prefix(transition, opacity linear 0.1s)
+
+        float: right
+        padding: 3px
+        background-color: #993333
+        color: #fff
+        font-size: 0.7em
+
+        &::after
+          content: ''
+
+      &:hover
+        background-color: #dddddd
+        .delete_button
+          opacity: 1.0
+
+      .name
+        display: block
+        font-weight: bold
+      .key
+        display: block
+        font-size: 0.8em
+        max-width: 300px
+        overflow: hidden
+        word-wrap: break-word
 
 #tasks
   background-color: #bbbbbb

@@ -7,6 +7,8 @@ var selected_task_id = null
 
 var popup_window_transition_duration = 200; // msecs
 
+var maru_default_port = 8490;
+
 function template(name, argument) {
   var template_element = $("template#" + name + "_template");
 
@@ -445,6 +447,49 @@ var popup_windows = {
 
       update_clients();
     }
+  },
+
+  user_clients: {
+    template_name: "user_clients",
+    initialize: function () {
+      $.ajax({
+        url: '/user/' + encodeURIComponent(window.user_info.name) + '/clients',
+        dataType: 'json',
+        success: function (clients) {
+          var locations = {}, locations_order = [];
+
+          $.each(clients, function (i, client) {
+            var location_string = client.remote_host;
+
+            // Only include the port number if it's non-standard
+            if (client.remote_port !== maru_default_port)
+              location_string += ":" + client.remote_port;
+
+            if (!locations[location_string]) {
+              locations[location_string] = [];
+              locations_order.push(location_string);
+            }
+
+            locations[location_string].push(client);
+          });
+
+          $("#user_clients").append(
+              objects_category_view("client", locations_order,
+                function (category_name, pane) {
+                  var ul = $("<ul class='clients'>"); pane.append(ul);
+
+                  if (typeof locations[category_name] !== 'undefined') {
+                    $.each(locations[category_name], function (i, client) {
+                      ul.append(template("client", client));
+                    });
+                  }
+                },
+                function (category_name) {
+                  // Don't need to do anything
+                }));
+        }
+      });
+    }
   }
 };
 
@@ -479,6 +524,128 @@ function close_popup_window() {
   }, popup_window_transition_duration);
 }
 
+/*
+ * Creates a UI element suitable for editing categorized objects.
+ *
+ * @param {String} object_type
+ *   The type of objects this pane will edit. At the moment, it only
+ *   affects the resulting CSS class.
+ * @param {[String]} categories
+ *   A list of categories to present on the left side.
+ * @param {Function} view_function
+ *   A function taking the category text and the view pane as parameters.
+ *   Invoked when a category is selected.
+ * @param {Function} [category_create_function]
+ *   A function to be invoked when a category is created. If not provided,
+ *   the option to create categories will not be shown.
+ */
+function objects_category_view(object_type, categories, view_function, category_create_function) {
+  var category_view = $(template("objects_category_view",
+                                 {object_type: object_type
+                                 ,show_add:    (category_create_function ? true : false)}));
+
+  var category_click_handler = function () {
+    if (!$(this).hasClass("selected")) {
+      $(this).siblings().removeClass("selected");
+      $(this).addClass("selected");
+
+      view_function($(this).text(), $(".object_view_pane", category_view).empty());
+    } else {
+      // Unset category entirely.
+      $(this).removeClass("selected");
+      $(".object_view_pane", category_view).empty();
+    }
+  }
+
+  var categories_map = {};
+
+  $.each(categories, function (i, category) {
+
+    $(".categories", category_view).append(
+      categories_map[category] =
+        $("<li>").text(category)
+                 .click(category_click_handler));
+  });
+
+  // For modifying the view later
+  category_view.data("view_function",  view_function);
+  category_view.data("categories_map", categories_map);
+
+  // Category creation
+  $(".category_buttons .new_category", category_view).click(function () {
+    var input          = $("<input type='text'>")
+      , categories_map = category_view.data("categories_map");
+
+    var handle_blur = function () {
+
+      // Must not be blank, must not already exist
+      if (input.val().replace(/^ | $/g, '').length > 0
+      &&  typeof categories_map[input.val()] === 'undefined') {
+
+        // Add click handler
+        input.parent().click(category_click_handler);
+
+        // Modify categories map to include new category
+        categories_map[input.val()] = input.parent();
+
+        // Not sure if this data directly mutable so I do this anyway
+        //  -devyn
+        category_view.data("categories_map", categories_map);
+
+        // Set category title to contents
+        input.parent().text(input.val());
+
+      } else {
+        // If invalid, clear pane and remove category
+        $(".object_view_pane").empty();
+        input.parent().remove();
+      }
+    }
+
+    input.blur(function (e) {
+      handle_blur();
+    });
+
+    input.keypress(function (e) {
+      if (e.keyCode === 13 /* enter key */) {
+        e.preventDefault();
+        handle_blur();
+      }
+    });
+
+    var li = $("<li>").append(input);
+
+    $(".categories", category_view).append(li);
+
+    // Run click handler to select it
+    category_click_handler.apply(li);
+
+    // Let the user type right away
+    input.focus();
+  });
+
+  return category_view;
+}
+
+function objects_category_view_goto(category_view, category) {
+  category_view = $(category_view); // just in case we get passed a non-jQuery
+
+  if (category === null) {
+    // Unset category entirely.
+    $(".categories",       category_view).removeClass("selected");
+    $(".object_view_pane", category_view).empty();
+  } else {
+    var category_item = category_view.data("categories_map")[category];
+
+    if (typeof category_item !== 'undefined') {
+      category_item.siblings().removeClass("selected");
+      category_item.addClass("selected");
+
+      category_view.data("view_function")(category, $(".object_view_pane", category_view));
+    }
+  }
+}
+
 function task_produce_link(e) {
   open_popup_window("task_produce");
   e.stopPropagation();
@@ -497,15 +664,14 @@ function update_nav(user_info) {
     $("#nav_right .logged_in, #nav_right .admin").remove();
   }
 
-  $("#new_task_link").click(function (e) {
-    open_popup_window("new_task");
-    e.stopPropagation();
-  });
-
-  $("#user_login_link").click(function (e) {
-    open_popup_window("user_login");
-    e.stopPropagation();
-  });
+  // Popups
+  $.each(["new_task", "user_clients", "user_login"],
+      function (i, popup_name) {
+        $("#" + popup_name + "_link").click(function (e) {
+          open_popup_window(popup_name);
+          e.stopPropagation();
+        });
+      });
 
   $("#session_delete_link").click(function (e) {
     session_delete();

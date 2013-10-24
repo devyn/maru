@@ -24,7 +24,7 @@
           %a#new_task_link new task
 
         %li.logged_in>
-          %a#clients_link clients
+          %a#user_clients_link connections
 
         %li.admin>
           %a#users_link users
@@ -41,8 +41,10 @@
     #click_catcher
 
     -# client side templates
+    = haml :'objects/category_view'
     = haml :'user/login'
     = haml :'user/clients'
+    = haml :'client'
     = haml :'tasks/new'
     = haml :'task/produce'
     = haml :'task/element'
